@@ -1,0 +1,555 @@
+/* Analysis Page Styles */
+
+.container {
+    min-height: 100vh;
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Loading State */
+.loadingState {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loadingContent {
+    text-align: center;
+}
+
+.loadingContent h2 {
+    margin-top: 24px;
+    font-size: 24px;
+}
+
+.loadingContent p {
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+.loadingSteps {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    animation: pulse 1.5s infinite;
+}
+
+.stepIcon {
+    font-size: 24px;
+}
+
+/* Error State */
+.errorState {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.errorContent {
+    text-align: center;
+}
+
+.errorIcon {
+    font-size: 64px;
+}
+
+.errorContent h2 {
+    margin-top: 16px;
+    color: var(--accent-red);
+}
+
+.errorContent p {
+    color: var(--text-secondary);
+    margin: 16px 0 24px;
+    max-width: 400px;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.backLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: color var(--transition-fast);
+}
+
+.backLink:hover {
+    color: var(--text-primary);
+}
+
+.userBadge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.remaining {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Live Indicator */
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-green);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.liveDot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+}
+
+.refreshing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-orange);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.refreshDot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.lastUpdated {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.7);
+    }
+
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 6px rgba(0, 210, 106, 0);
+    }
+}
+
+/* Token Header */
+.tokenHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.tokenInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tokenName {
+    font-size: 32px;
+    font-weight: 700;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.tokenSymbol {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.tokenAddress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tokenAddress code {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 6px 12px;
+    border-radius: 8px;
+}
+
+.copyBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+.copyBtn:hover {
+    opacity: 1;
+}
+
+.priceInfo {
+    text-align: right;
+}
+
+.price {
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+}
+
+.priceLabel {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.priceChange {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.priceChange.positive {
+    color: var(--accent-green);
+}
+
+.priceChange.negative {
+    color: var(--accent-red);
+}
+
+/* Analysis Grid */
+.analysisGrid {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+@media (max-width: 1200px) {
+    .analysisGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .analysisGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Profit Card */
+.profitCard {
+    text-align: center;
+}
+
+.profitCard h2 {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.verdict {
+    margin-top: 24px;
+}
+
+.recommendation {
+    font-size: 24px;
+    font-weight: 700;
+    padding: 12px 24px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.recBuy {
+    background: var(--accent-green-glow);
+    color: var(--accent-green);
+}
+
+.recWait {
+    background: rgba(255, 159, 67, 0.2);
+    color: var(--accent-orange);
+}
+
+.recAvoid {
+    background: var(--accent-red-glow);
+    color: var(--accent-red);
+}
+
+.confidence {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.riskBadge {
+    margin-top: 16px;
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.riskLow {
+    background: var(--accent-green-glow);
+    color: var(--accent-green);
+}
+
+.riskMedium {
+    background: rgba(255, 159, 67, 0.2);
+    color: var(--accent-orange);
+}
+
+.riskHigh {
+    background: var(--accent-red-glow);
+    color: var(--accent-red);
+}
+
+.riskExtreme {
+    background: rgba(255, 0, 0, 0.3);
+    color: #ff3333;
+}
+
+/* Metrics Section */
+.metricsSection h2 {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.metricsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+/* Buy/Sell Bar */
+.buySellBar {
+    margin-top: 24px;
+}
+
+.barLabel {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.buyLabel {
+    color: var(--accent-green);
+}
+
+.sellLabel {
+    color: var(--accent-red);
+}
+
+.bar {
+    height: 12px;
+    background: var(--accent-red);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.buyFill {
+    height: 100%;
+    background: var(--accent-green);
+    border-radius: 6px 0 0 6px;
+    transition: width 0.5s ease;
+}
+
+/* Bonding Card */
+.bondingCard h2 {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.bondingProgress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.progressCircle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.progressCircle svg {
+    width: 100%;
+    height: 100%;
+}
+
+.progressBg {
+    stroke: var(--bg-secondary);
+}
+
+.progressFill {
+    stroke: var(--accent-green);
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s ease;
+}
+
+.progressValue {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.bondingInfo {
+    text-align: center;
+}
+
+.toGraduation {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.graduationChance {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--accent-purple);
+}
+
+/* Holder Distribution */
+.holderDist {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+.holderDist h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.holderBar {
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.holderFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-red));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.holderPercent {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.warning {
+    color: var(--accent-orange);
+    font-size: 12px;
+}
+
+/* Insights Card */
+.insightsCard {
+    margin-bottom: 32px;
+}
+
+.insightsCard h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+}
+
+.summary {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.insights h3 {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.insights ul {
+    list-style: none;
+}
+
+.insights li {
+    padding: 8px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.insights li:last-child {
+    border-bottom: none;
+}
+
+.insightBullet {
+    color: var(--accent-purple);
+    font-weight: 600;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.disclaimer {
+    opacity: 0.7;
+}
