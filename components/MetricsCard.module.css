@@ -51,3 +51,27 @@
 .trend.down {
     color: var(--accent-red);
 }
+
+@keyframes shine {
+    0% {
+        background-position: 0% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.goldShine {
+    background: linear-gradient(90deg,
+            #fbbf24 0%,
+            #fff 50%,
+            #fbbf24 100%);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shine 3s linear infinite;
+    font-weight: 800;
+    text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+}

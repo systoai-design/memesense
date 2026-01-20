@@ -1,0 +1,188 @@
+/* Onboarding Premium Styles */
+.container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #000000;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background Effects */
+.container::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, rgba(204, 255, 0, 0.15) 0%, transparent 70%);
+    filter: blur(100px);
+    z-index: 0;
+}
+
+.container::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -20%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+    filter: blur(100px);
+    z-index: 0;
+}
+
+.wizard {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 480px;
+    padding: 40px;
+    background: rgba(18, 18, 20, 0.6);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    box-shadow:
+        0 40px 80px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    text-align: center;
+    animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Progress Dots */
+.progress {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dotActive {
+    background: #CCFF00;
+    width: 32px;
+    border-radius: 100px;
+    box-shadow: 0 0 12px rgba(204, 255, 0, 0.4);
+}
+
+/* Content */
+.stepIcon {
+    font-size: 48px;
+    margin-bottom: 24px;
+    display: inline-block;
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2));
+    animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, white, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+/* Buttons */
+.button {
+    background: #CCFF00;
+    color: #000;
+    font-weight: 700;
+    font-size: 16px;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 16px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.button:hover {
+    background: #b3e600;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(204, 255, 0, 0.25);
+}
+
+.button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.buttonSecondary {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 0;
+}
+
+.buttonSecondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+}
+
+.loader {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
