@@ -1,54 +1,161 @@
-/* Analysis Page Styles */
+/* Analysis Page Styles - Solid Glass Design */
 
 .container {
     min-height: 100vh;
     padding: 24px;
     max-width: 1400px;
     margin: 0 auto;
+    position: relative;
+    /* Clean Solid Glass Background - No Gradient */
+    background: transparent;
 }
 
-/* Loading State */
+/* Glass Utility - replicating .glassCard from page.module.css */
+.glassPanel {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Consistent border */
+    border-radius: var(--radius-xl);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+
 .loadingState {
     min-height: 80vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    z-index: 10;
 }
 
 .loadingContent {
     text-align: center;
+    padding: 60px;
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 1),
+        0 20px 50px rgba(0, 0, 0, 0.5);
+    min-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--primary);
+    border-right: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    margin-bottom: 24px;
+    box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
 .loadingContent h2 {
     margin-top: 24px;
     font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
 }
 
 .loadingContent p {
     color: var(--text-secondary);
     margin-top: 8px;
+    font-size: 14px;
 }
 
 .loadingSteps {
-    margin-top: 32px;
+    margin-top: 40px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
 }
 
 .step {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
     color: var(--text-secondary);
-    animation: pulse 1.5s infinite;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.step:nth-child(1) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.1s;
+    opacity: 0;
+}
+
+.step:nth-child(2) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.3s;
+    opacity: 0;
+}
+
+.step:nth-child(3) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.5s;
+    opacity: 0;
 }
 
 .stepIcon {
-    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    color: var(--text-muted);
 }
 
-/* Error State */
+.step:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+
 .errorState {
     min-height: 80vh;
     display: flex;
@@ -58,6 +165,11 @@
 
 .errorContent {
     text-align: center;
+    padding: 48px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
 }
 
 .errorIcon {
@@ -66,7 +178,7 @@
 
 .errorContent h2 {
     margin-top: 16px;
-    color: var(--accent-red);
+    color: var(--danger);
 }
 
 .errorContent p {
@@ -75,12 +187,21 @@
     max-width: 400px;
 }
 
-/* Header */
+/* ============================================
+   Header
+   ============================================ */
+
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 32px;
+    padding: 16px 24px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Consistent border */
+    border-radius: var(--radius-lg);
 }
 
 .backLink {
@@ -89,36 +210,25 @@
     gap: 8px;
     color: var(--text-secondary);
     font-weight: 500;
+    text-decoration: none;
     transition: color var(--transition-fast);
 }
 
 .backLink:hover {
-    color: var(--text-primary);
+    color: var(--primary);
 }
 
-.userBadge {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.remaining {
-    font-size: 14px;
-    color: var(--text-muted);
-}
-
-/* Live Indicator */
 .liveIndicator {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
 }
 
 .live {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--accent-green);
+    gap: 8px;
+    color: var(--success);
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
@@ -126,26 +236,27 @@
 }
 
 .liveDot {
-    width: 8px;
-    height: 8px;
-    background: var(--accent-green);
+    width: 10px;
+    height: 10px;
+    background: var(--success);
     border-radius: 50%;
-    animation: pulse-dot 2s infinite;
+    animation: pulseDot 2s infinite;
+    box-shadow: 0 0 10px var(--success);
 }
 
 .refreshing {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--accent-orange);
+    gap: 8px;
+    color: var(--warning);
     font-size: 12px;
     font-weight: 500;
 }
 
 .refreshDot {
-    width: 8px;
-    height: 8px;
-    background: var(--accent-orange);
+    width: 10px;
+    height: 10px;
+    background: var(--warning);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -155,28 +266,59 @@
     color: var(--text-muted);
 }
 
-@keyframes pulse-dot {
+@keyframes pulseDot {
 
     0%,
     100% {
         opacity: 1;
-        box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.7);
+        box-shadow: 0 0 0 0 rgba(0, 212, 126, 0.7);
     }
 
     50% {
         opacity: 0.8;
-        box-shadow: 0 0 0 6px rgba(0, 210, 106, 0);
+        box-shadow: 0 0 0 8px rgba(0, 212, 126, 0);
     }
 }
 
-/* Token Header */
+.userBadge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.scanBtn {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.remaining {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   Token Header
+   ============================================ */
+
 .tokenHeader {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 32px;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 24px;
+    padding: 24px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
 }
 
 .tokenInfo {
@@ -187,7 +329,7 @@
 
 .tokenName {
     font-size: 32px;
-    font-weight: 700;
+    font-weight: 800;
     display: flex;
     align-items: baseline;
     gap: 12px;
@@ -209,9 +351,9 @@
     font-family: var(--font-mono);
     font-size: 14px;
     color: var(--text-secondary);
-    background: var(--bg-secondary);
-    padding: 6px 12px;
-    border-radius: 8px;
+    background: var(--bg-tertiary);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
 }
 
 .copyBtn {
@@ -220,11 +362,73 @@
     cursor: pointer;
     font-size: 16px;
     opacity: 0.7;
-    transition: opacity var(--transition-fast);
+    transition: all var(--transition-fast);
+    padding: 8px;
+    border-radius: 8px;
 }
 
 .copyBtn:hover {
     opacity: 1;
+    background: var(--primary-glow);
+}
+
+.tokenMeta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ageBadge,
+.pumpBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 50px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.pumpBadge {
+    background: rgba(0, 212, 126, 0.15);
+    color: var(--primary);
+}
+
+.priceChanges {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.priceTag {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+}
+
+.priceTag.positive {
+    background: rgba(0, 212, 126, 0.15);
+    color: var(--success);
+}
+
+.priceTag.negative {
+    background: rgba(255, 77, 109, 0.15);
+    color: var(--danger);
+}
+
+.warningBanner {
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    background: rgba(255, 180, 67, 0.15);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-md);
+    color: var(--warning);
+    font-size: 14px;
 }
 
 .priceInfo {
@@ -232,8 +436,8 @@
 }
 
 .price {
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 32px;
+    font-weight: 800;
     display: flex;
     flex-direction: column;
 }
@@ -245,48 +449,55 @@
 }
 
 .priceChange {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     margin-top: 4px;
 }
 
 .priceChange.positive {
-    color: var(--accent-green);
+    color: var(--success);
 }
 
 .priceChange.negative {
-    color: var(--accent-red);
+    color: var(--danger);
 }
 
-/* Analysis Grid */
+/* ============================================
+   Analysis Grid
+   ============================================ */
+
 .analysisGrid {
     display: grid;
-    grid-template-columns: 300px 1fr 300px;
+    grid-template-columns: 1.5fr 1fr;
     gap: 24px;
     margin-bottom: 32px;
 }
 
-@media (max-width: 1200px) {
-    .analysisGrid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     .analysisGrid {
         grid-template-columns: 1fr;
     }
 }
 
-/* Profit Card */
+/* ============================================
+   Profit Card
+   ============================================ */
+
 .profitCard {
     text-align: center;
+    padding: 32px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
 }
 
 .profitCard h2 {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .verdict {
@@ -294,30 +505,83 @@
 }
 
 .recommendation {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
-    padding: 12px 24px;
-    border-radius: 12px;
+    padding: 12px 32px;
+    border-radius: var(--radius-full);
     display: inline-block;
 }
 
 .recBuy {
-    background: var(--accent-green-glow);
-    color: var(--accent-green);
+    background: rgba(0, 212, 126, 0.2);
+    color: var(--success);
 }
 
 .recWait {
-    background: rgba(255, 159, 67, 0.2);
-    color: var(--accent-orange);
+    background: rgba(255, 180, 67, 0.2);
+    color: var(--warning);
 }
 
 .recAvoid {
-    background: var(--accent-red-glow);
-    color: var(--accent-red);
+    background: rgba(255, 77, 109, 0.2);
+    color: var(--danger);
+}
+
+.verdictGreen {
+    color: var(--success);
+}
+
+.verdictYellow {
+    color: var(--warning);
+}
+
+.verdictRed {
+    color: var(--danger);
+}
+
+.momentumSparkline {
+    display: inline-block;
+    width: 40px;
+    height: 16px;
+    margin-left: 10px;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='16' viewBox='0 0 40 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 15L10 10L18 13L28 5L39 1' stroke='%2300D47E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+    vertical-align: middle;
+}
+
+.zombieMode {
+    filter: grayscale(100%) opacity(0.6);
+    pointer-events: none;
+}
+
+.advancedSignals {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    font-size: 13px;
+}
+
+.signalItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.signalLabel {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.signalValue {
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .confidence {
-    margin-top: 12px;
+    margin-top: 16px;
     font-size: 14px;
     color: var(--text-secondary);
 }
@@ -325,37 +589,52 @@
 .riskBadge {
     margin-top: 16px;
     display: inline-block;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
+    padding: 8px 20px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .riskLow {
-    background: var(--accent-green-glow);
-    color: var(--accent-green);
+    background: rgba(0, 212, 126, 0.15);
+    color: var(--success);
 }
 
 .riskMedium {
-    background: rgba(255, 159, 67, 0.2);
-    color: var(--accent-orange);
+    background: rgba(255, 180, 67, 0.15);
+    color: var(--warning);
 }
 
 .riskHigh {
-    background: var(--accent-red-glow);
-    color: var(--accent-red);
+    background: rgba(255, 77, 109, 0.15);
+    color: var(--danger);
 }
 
 .riskExtreme {
-    background: rgba(255, 0, 0, 0.3);
+    background: rgba(255, 0, 0, 0.15);
     color: #ff3333;
 }
 
-/* Metrics Section */
+/* ============================================
+   Metrics Section
+   ============================================ */
+
+.metricsSection {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+}
+
 .metricsSection h2 {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--text-secondary);
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .metricsGrid {
@@ -364,45 +643,63 @@
     gap: 16px;
 }
 
-/* Buy/Sell Bar */
+/* ============================================
+   Buy/Sell Bar
+   ============================================ */
+
 .buySellBar {
-    margin-top: 24px;
+    margin-top: 32px;
 }
 
 .barLabel {
     display: flex;
     justify-content: space-between;
     font-size: 13px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .buyLabel {
-    color: var(--accent-green);
+    color: var(--success);
+    font-weight: 600;
 }
 
 .sellLabel {
-    color: var(--accent-red);
+    color: var(--danger);
+    font-weight: 600;
 }
 
 .bar {
-    height: 12px;
-    background: var(--accent-red);
-    border-radius: 6px;
+    height: 14px;
+    background: var(--danger);
+    border-radius: var(--radius-full);
     overflow: hidden;
 }
 
 .buyFill {
     height: 100%;
-    background: var(--accent-green);
-    border-radius: 6px 0 0 6px;
+    background: var(--success);
+    border-radius: var(--radius-full) 0 0 var(--radius-full);
     transition: width 0.5s ease;
 }
 
-/* Bonding Card */
+/* ============================================
+   Bonding Card
+   ============================================ */
+
+.bondingCard {
+    padding: 32px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
+}
+
 .bondingCard h2 {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .bondingProgress {
@@ -414,8 +711,8 @@
 
 .progressCircle {
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
 }
 
 .progressCircle svg {
@@ -424,23 +721,23 @@
 }
 
 .progressBg {
-    stroke: var(--bg-secondary);
+    stroke: rgba(255, 255, 255, 0.1);
 }
 
 .progressFill {
-    stroke: var(--accent-green);
+    stroke: var(--primary);
     stroke-linecap: round;
     transition: stroke-dasharray 1s ease;
+    /* Removed heavy glow for cleaner look */
 }
 
 .progressValue {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
+    fill: #ffffff;
+    /* Explicit white for maximum visibility */
 }
+
 
 .bondingInfo {
     text-align: center;
@@ -454,10 +751,13 @@
 .graduationChance {
     margin-top: 8px;
     font-size: 14px;
-    color: var(--accent-purple);
+    color: var(--primary);
 }
 
-/* Holder Distribution */
+/* ============================================
+   Holder Distribution
+   ============================================ */
+
 .holderDist {
     margin-top: 32px;
     padding-top: 24px;
@@ -465,27 +765,29 @@
 }
 
 .holderDist h3 {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .holderBar {
-    height: 8px;
-    background: var(--bg-secondary);
-    border-radius: 4px;
+    height: 10px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
     overflow: hidden;
 }
 
 .holderFill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-purple), var(--accent-red));
-    border-radius: 4px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-full);
     transition: width 0.5s ease;
 }
 
 .holderPercent {
-    margin-top: 8px;
+    margin-top: 10px;
     font-size: 13px;
     color: var(--text-secondary);
     display: flex;
@@ -493,19 +795,84 @@
     gap: 8px;
 }
 
+/* Holders List */
+.holdersList {
+    list-style: none;
+    margin-top: 20px;
+    padding: 0;
+}
+
+.holderItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--bg-tertiary);
+    font-size: 13px;
+}
+
+.holderItem:last-child {
+    border-bottom: none;
+}
+
+.holderRank {
+    color: var(--text-muted);
+    font-size: 11px;
+    width: 24px;
+}
+
+.holderAddress {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.holderBalance {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .warning {
-    color: var(--accent-orange);
+    color: var(--warning);
     font-size: 12px;
 }
 
-/* Insights Card */
+.systemHolder {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    margin: 2px 0;
+    padding: 8px 8px;
+    /* Added padding for background */
+}
+
+.systemLabel {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(147, 51, 234, 0.2);
+    color: #d8b4fe;
+    border: 1px solid rgba(147, 51, 234, 0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   Insights Card
+   ============================================ */
+
 .insightsCard {
     margin-bottom: 32px;
+    padding: 32px;
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
 }
 
 .insightsCard h2 {
     font-size: 18px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .summary {
@@ -513,12 +880,17 @@
     line-height: 1.7;
     color: var(--text-secondary);
     margin-bottom: 24px;
+    padding: 20px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
 }
 
 .insights h3 {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text-muted);
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .insights ul {
@@ -526,11 +898,12 @@
 }
 
 .insights li {
-    padding: 8px 0;
+    padding: 14px 0;
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-secondary);
 }
 
 .insights li:last-child {
@@ -538,18 +911,431 @@
 }
 
 .insightBullet {
-    color: var(--accent-purple);
-    font-weight: 600;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 18px;
 }
 
-/* Footer */
+/* ============================================
+   Dead Coin Banner
+   ============================================ */
+
+.deadCoinBanner {
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    background: rgba(255, 77, 109, 0.15);
+    border: 2px solid var(--danger);
+    border-radius: var(--radius-lg);
+    color: var(--danger);
+    font-size: 14px;
+}
+
+.deadCoinBanner ul {
+    margin-top: 12px;
+    padding-left: 20px;
+    list-style: disc;
+}
+
+.deadCoinBanner li {
+    margin: 4px 0;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+/* ============================================
+   Verdict Section
+   ============================================ */
+
+.verdictText {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.confidenceTag {
+    display: inline-block;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   Signals List
+   ============================================ */
+
+.signalsList {
+    list-style: none;
+}
+
+.signalsList li {
+    padding: 12px 16px;
+    margin: 8px 0;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+}
+
+.signalsList li.bullish {
+    background: rgba(0, 212, 126, 0.1);
+    border-left: 3px solid var(--success);
+}
+
+.signalsList li.bearish {
+    background: rgba(255, 77, 109, 0.1);
+    border-left: 3px solid var(--danger);
+}
+
+.signalsList li.warning {
+    background: rgba(255, 180, 67, 0.1);
+    border-left: 3px solid var(--warning);
+}
+
+/* ============================================
+   Warning Flags
+   ============================================ */
+
+.warningFlags {
+    margin-top: 24px;
+    padding: 16px;
+    background: rgba(255, 180, 67, 0.1);
+    border-radius: var(--radius-md);
+}
+
+.warningFlags h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--warning);
+}
+
+.warningFlags ul {
+    list-style: none;
+}
+
+.flagItem {
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--warning);
+    border-bottom: 1px solid rgba(255, 180, 67, 0.2);
+}
+
+.flagItem:last-child {
+    border-bottom: none;
+}
+
+/* ============================================
+   Entry Point Section
+   ============================================ */
+
+.entryAdvice {
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.entryAdvice h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.entryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.entryItem {
+    text-align: center;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.entryLabel {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.entryValue {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.entryValue.yes {
+    color: var(--success);
+}
+
+.entryValue.no {
+    color: var(--danger);
+}
+
+.entryValue.highlight {
+    color: var(--primary);
+}
+
+.entryReasoning {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.aiAdvice {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 212, 126, 0.1);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* No Entry State */
+.trialRemaining {
+    background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.noEntry {
+    background: rgba(255, 77, 109, 0.05);
+    border-color: var(--danger);
+}
+
+.noEntry h3 {
+    color: var(--danger);
+}
+
+.noEntryContent {
+    padding: 16px 0;
+}
+
+.noEntryReason {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.noEntryRisk {
+    font-size: 14px;
+    color: var(--danger);
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+
 .footer {
     text-align: center;
-    padding: 24px;
+    padding: 32px;
     color: var(--text-muted);
     font-size: 13px;
 }
 
 .disclaimer {
     opacity: 0.7;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 1200px) {
+    .analysisGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .profitCard {
+        grid-column: 1 / 2;
+    }
+
+    .bondingCard {
+        grid-column: 2 / 3;
+    }
+
+    .metricsSection {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+
+    .analysisGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .profitCard,
+    .bondingCard,
+    .metricsSection {
+        grid-column: auto;
+    }
+
+    .header {
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .liveIndicator {
+        order: -1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .tokenHeader {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .priceInfo {
+        text-align: center;
+    }
+
+    .tokenName {
+        font-size: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   Premium Section
+   ============================================ */
+
+.premiumCard {
+    margin-bottom: 32px;
+    padding: 32px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    /* Glowing border for premium */
+    border-radius: var(--radius-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.premiumCard.locked {
+    border-color: var(--border-color);
+    min-height: 250px;
+}
+
+.premiumHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.premiumHeader h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.metricRow {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 32px;
+}
+
+.metricItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.metricLabel {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.metricValue {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.clusteringVisual {
+    padding-top: 24px;
+    border-top: 1px solid var(--border-light);
+}
+
+.clusteringVisual h3 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.clusterInfo {
+    font-size: 14px;
+    color: var(--success);
+}
+
+/* Locked Overlay */
+.lockedOverlay {
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(12px);
+    background: rgba(10, 10, 10, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.lockContent {
+    text-align: center;
+    max-width: 320px;
+}
+
+.lockIcon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.lockContent h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.lockContent p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
 }

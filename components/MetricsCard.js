@@ -18,34 +18,40 @@ export default function MetricsCard({ label, value, icon, trend, color }) {
                 <span className={styles.label}>{label}</span>
             </div>
             <div
-                className={styles.value}
+                className={`${styles.value} ${color === 'gold' ? styles.goldShine : ''}`}
                 style={{
                     color: color === 'green' ? 'var(--accent-green)' :
                         color === 'red' ? 'var(--accent-red)' :
-                            'var(--text-primary)'
+                            color === 'gold' ? undefined :
+                                'var(--text-primary)'
                 }}
             >
                 {value}
             </div>
-            {trend && (
-                <div className={`${styles.trend} ${styles[trend]}`}>
-                    {trend === 'up' ? (
-                        <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                <path d="M18 15l-6-6-6 6" />
-                            </svg>
-                            Bullish
-                        </>
-                    ) : (
-                        <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                <path d="M6 9l6 6 6-6" />
-                            </svg>
-                            Bearish
-                        </>
-                    )}
-                </div>
-            )}
-        </div>
+            {
+                trend && (
+                    <div
+                        className={`${styles.trend} ${styles[trend]}`}
+                        style={{ color: trend === 'up' ? '#22c55e' : '#ef4444' }}
+                    >
+                        {trend === 'up' ? (
+                            <>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <path d="M18 15l-6-6-6 6" />
+                                </svg>
+                                Bullish
+                            </>
+                        ) : (
+                            <>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <path d="M6 9l6 6 6-6" />
+                                </svg>
+                                Bearish
+                            </>
+                        )}
+                    </div>
+                )
+            }
+        </div >
     );
 }
