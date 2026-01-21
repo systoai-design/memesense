@@ -2,6 +2,25 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import {
+    BarChart3,
+    Users,
+    Bot,
+    AlertTriangle,
+    Search,
+    Clock,
+    Zap,
+    Flame,
+    Activity,
+    Wallet,
+    User,
+    Snowflake,
+    Check,
+    X,
+    ChevronLeft,
+    Copy,
+    ExternalLink
+} from 'lucide-react';
 import styles from './page.module.css';
 import ProfitabilityGauge from '@/components/ProfitabilityGauge';
 import MetricsCard from '@/components/MetricsCard';
@@ -36,30 +55,34 @@ export default function AnalyzePage() {
 
     // Fetch analysis data
     const fetchAnalysis = useCallback(async (isRefresh = false) => {
-        try {
-            if (!isRefresh) {
-                setLoading(true);
-            } else {
-                setIsRefreshing(true);
-            }
-            setError(null);
+        if (!ca) return;
 
-            // Get device ID for tracking
+        if (!isRefresh) {
+            setLoading(true);
+        } else {
+            setIsRefreshing(true);
+        }
+        setError(null);
+
+        // Timeout protection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
             let deviceId = localStorage.getItem('memesense_device_id');
             if (!deviceId) {
                 deviceId = crypto.randomUUID();
                 localStorage.setItem('memesense_device_id', deviceId);
             }
 
-            // Get wallet address if connected
-            const walletAddress = localStorage.getItem('memesense_wallet');
-
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ca, deviceId, walletAddress })
+                body: JSON.stringify({ ca, deviceId, walletAddress }),
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
             const result = await response.json();
 
             if (!response.ok) {
@@ -69,15 +92,17 @@ export default function AnalyzePage() {
             setData(result);
             setLastUpdated(new Date());
         } catch (err) {
-            if (!isRefresh) {
-                setError(err.message);
+            if (err.name === 'AbortError') {
+                setError('Analysis timed out. The network is busy, please try again.');
+            } else {
+                setError(err.message || 'Failed to analyze token');
             }
-            console.error('Fetch error:', err);
+            console.error(err);
         } finally {
             setLoading(false);
             setIsRefreshing(false);
         }
-    }, [ca]);
+    }, [ca, walletAddress]);
 
     // Initial fetch
     useEffect(() => {
@@ -102,20 +127,20 @@ export default function AnalyzePage() {
             <div className={styles.container}>
                 <div className={styles.loadingState}>
                     <div className={styles.loadingContent}>
-                        <div className="spinner" style={{ width: 60, height: 60 }}></div>
+                        <div className={styles.spinner}></div>
                         <h2>Analyzing Token...</h2>
                         <p>Fetching on-chain data and running AI analysis</p>
                         <div className={styles.loadingSteps}>
                             <div className={styles.step}>
-                                <span className={styles.stepIcon}>📊</span>
+                                <span className={styles.stepIcon}><BarChart3 size={16} /></span>
                                 <span>Fetching market data...</span>
                             </div>
                             <div className={styles.step}>
-                                <span className={styles.stepIcon}>👥</span>
+                                <span className={styles.stepIcon}><Users size={16} /></span>
                                 <span>Analyzing holder distribution...</span>
                             </div>
                             <div className={styles.step}>
-                                <span className={styles.stepIcon}>🤖</span>
+                                <span className={styles.stepIcon}><Bot size={16} /></span>
                                 <span>Running AI prediction model...</span>
                             </div>
                         </div>
@@ -130,7 +155,9 @@ export default function AnalyzePage() {
             <div className={styles.container}>
                 <div className={styles.errorState}>
                     <div className={styles.errorContent}>
-                        <span className={styles.errorIcon}>⚠️</span>
+                        <div className={styles.errorIcon} style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                            <AlertTriangle size={64} color="#ef4444" />
+                        </div>
                         <h2>Analysis Failed</h2>
                         <p>{error}</p>
                         <a href="/" className="btn btn-primary">
@@ -164,15 +191,17 @@ export default function AnalyzePage() {
         }
     };
 
+    const handleTrade = () => {
+        window.open('https://gmgn.ai/r/memesense', '_blank');
+    };
+
     return (
         <div className={styles.container}>
             {/* Header */}
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
                     <a href="/app" className={styles.backLink}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M19 12H5M12 19l-7-7 7-7" />
-                        </svg>
+                        <ChevronLeft size={20} />
                         Back
                     </a>
                     <a href="/app">
@@ -198,8 +227,24 @@ export default function AnalyzePage() {
                     )}
                 </div>
                 <div className={styles.headerRight}>
+                    {/* Trade Button (New) */}
+                    <button
+                        onClick={handleTrade}
+                        className="btn"
+                        style={{
+                            background: 'linear-gradient(45deg, #00C2FF, #00EAFF)',
+                            color: '#000',
+                            fontWeight: 'bold',
+                            border: 'none',
+                            boxShadow: '0 0 15px rgba(0, 194, 255, 0.4)'
+                        }}
+                    >
+                        <Zap size={16} style={{ marginRight: 6, fill: 'currentColor' }} />
+                        Trade on GMGN
+                    </button>
+
                     <a href="/app" className={`btn btn-primary ${styles.scanBtn}`}>
-                        🔍 Scan New Token
+                        <Search size={16} style={{ marginRight: 6 }} /> Scan New Token
                     </a>
                     {walletAddress && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '10px' }}>
@@ -279,10 +324,10 @@ export default function AnalyzePage() {
                                 onClick={() => navigator.clipboard.writeText(ca)}
                                 title="Copy address"
                             >
-                                📋
+                                <Copy size={16} />
                             </button>
                         </div>
-                        <span className={styles.ageBadge}>⏱️ Age: {token.ageFormatted || 'New'}</span>
+                        <span className={styles.ageBadge}><Clock size={14} style={{ marginRight: 4 }} /> Age: {token.ageFormatted || 'New'}</span>
                         {token.isPumpFun && <span className={styles.pumpBadge}>🎈 pump.fun</span>}
                     </div>
                 </div>
@@ -305,11 +350,30 @@ export default function AnalyzePage() {
                 </div>
             </section >
 
+
+            {/* Live Chart Section (DexScreener) */}
+            <section style={{
+                marginBottom: '24px',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '1px solid var(--border-color)',
+                background: '#111'
+            }}>
+                <iframe
+                    src={`https://dexscreener.com/solana/${ca}?embed=1&theme=dark&trades=0&info=0`}
+                    width="100%"
+                    height="450px"
+                    style={{ border: 'none', display: 'block' }}
+                    title="Live Chart"
+                />
+            </section>
+
             {/* Liquidity Warning */}
             {
                 token.liquidity && token.liquidityRatio && token.liquidityRatio < 5 && (
                     <div className={styles.warningBanner}>
-                        ⚠️ <strong>Low Liquidity Warning:</strong> Only ${token.liquidity?.toLocaleString()} liquidity ({token.liquidityRatio?.toFixed(1)}% of MCap). High slippage risk!
+                        <AlertTriangle size={18} style={{ marginRight: 8, display: 'inline', verticalAlign: 'text-bottom' }} />
+                        <strong>Low Liquidity Warning:</strong> Only ${token.liquidity?.toLocaleString()} liquidity ({token.liquidityRatio?.toFixed(1)}% of MCap). High slippage risk!
                     </div>
                 )
             }
@@ -345,27 +409,27 @@ export default function AnalyzePage() {
                         <h2>Key Metrics</h2>
                         <div className={styles.metricsGrid}>
                             <MetricsCard
-                                label="Holders / Unique Buyers"
-                                value={`${holders.total?.toLocaleString() || '0'} / ${metrics.uniqueBuyers?.toLocaleString() || metrics.buyCount?.toLocaleString() || '0'}`}
-                                icon="👥"
+                                label="Holders / 24h Buys"
+                                value={`${(holders.isEstimated && holders.total === 5000) ? '5,000+' : holders.total?.toLocaleString() || '0'} / ${metrics.buyCount?.toLocaleString() || '0'}`}
+                                icon={<Users size={18} color="var(--primary)" />}
                                 trend={holders.total > 200 ? 'up' : null}
                             />
                             <MetricsCard
                                 label="Buy Ratio"
                                 value={`${metrics.buyRatio}%`}
-                                icon="📈"
+                                icon={<Activity size={18} color={metrics.buyRatio > 55 ? 'var(--success)' : 'var(--danger)'} />}
                                 trend={metrics.buyRatio > 55 ? 'up' : metrics.buyRatio < 45 ? 'down' : null}
                                 color={metrics.buyRatio > 55 ? 'green' : metrics.buyRatio < 45 ? 'red' : null}
                             />
                             <MetricsCard
                                 label="24h Volume"
                                 value={`$${(token.volume24h / 1000).toFixed(1)}K`}
-                                icon="💰"
+                                icon={<Wallet size={18} color="var(--text-secondary)" />}
                             />
                             <MetricsCard
                                 label="FOMO Grade"
                                 value={`${analysis.entryScore}/10`}
-                                icon="🔥"
+                                icon={<Flame size={18} color={analysis.entryScore > 7 ? 'orange' : 'var(--text-secondary)'} />}
                                 color={
                                     analysis.entryScore > 8 ? 'gold' :
                                         analysis.entryScore >= 7 ? 'green' :
@@ -375,12 +439,12 @@ export default function AnalyzePage() {
                             <MetricsCard
                                 label="5m Volume"
                                 value={`$${(token.volume5m / 1000).toFixed(1)}K`}
-                                icon="⏱️"
+                                icon={<Clock size={18} color="var(--text-secondary)" />}
                             />
                             <MetricsCard
                                 label="Volume Velocity"
                                 value={data.advanced?.volumeVelocity?.ratio || '---'}
-                                icon="🌊"
+                                icon={<Zap size={18} color="var(--primary)" />}
                                 color={data.advanced?.volumeVelocity?.status === 'ZOMBIE MODE' ? 'red' : 'green'}
                             />
                         </div>
@@ -447,7 +511,7 @@ export default function AnalyzePage() {
                     <section className={`card ${styles.profitCard}`} style={{ padding: '24px', textAlign: 'left' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🐳</span>
+                                <span style={{ fontSize: '1.2rem' }}><Bot size={24} color="var(--primary)" /></span>
                                 <h2 style={{ textAlign: 'left', margin: 0, fontSize: '1.1rem' }}>Whale & Dev Analysis</h2>
                             </div>
                             <span style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px', color: '#fff', opacity: 0.7 }}>PREMIUM UNLOCKED</span>
@@ -533,7 +597,7 @@ export default function AnalyzePage() {
                             {/* Burn % */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '18px' }}>🔥</span>
+                                    <span style={{ fontSize: '18px' }}><Flame size={18} color="orange" /></span>
                                     <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Burned:</span>
                                 </div>
                                 <span style={{
@@ -548,22 +612,22 @@ export default function AnalyzePage() {
                             {/* Renounced */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '18px' }}>👤</span>
+                                    <span style={{ fontSize: '18px' }}><User size={18} color="var(--text-secondary)" /></span>
                                     <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Renounced:</span>
                                 </div>
                                 <span style={{ fontSize: '18px' }}>
-                                    {data.tokenSafety?.isRenounced ? '✅' : '❌'}
+                                    {data.tokenSafety?.isRenounced ? <Check size={18} color="var(--success)" /> : <X size={18} color="var(--danger)" />}
                                 </span>
                             </div>
 
                             {/* Freeze Revoked */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '18px' }}>❄️</span>
+                                    <span style={{ fontSize: '18px' }}><Snowflake size={18} color="cyan" /></span>
                                     <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Freeze Revoked:</span>
                                 </div>
                                 <span style={{ fontSize: '18px' }}>
-                                    {data.tokenSafety?.isFreezeRevoked ? '✅' : '❌'}
+                                    {data.tokenSafety?.isFreezeRevoked ? <Check size={18} color="var(--success)" /> : <X size={18} color="var(--danger)" />}
                                 </span>
                             </div>
                         </div>
@@ -798,6 +862,45 @@ export default function AnalyzePage() {
                                 <span className={styles.metricValue}>12% (Healthy)</span>
                             </div>
                         </div>
+
+                        {/* Whale List Integration */}
+                        <div className={styles.clusteringVisual} style={{ marginBottom: '20px' }}>
+                            <h3>🐋 Whale Wallets ({data.mechanics?.whales?.count || 0})</h3>
+                            {data.mechanics?.whales?.hasWhales ? (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                    gap: '10px',
+                                    marginTop: '10px'
+                                }}>
+                                    {data.mechanics.whales.wallets.map((whale, idx) => (
+                                        <div key={idx} style={{
+                                            background: 'rgba(255,255,255,0.05)',
+                                            padding: '8px',
+                                            borderRadius: '6px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            fontSize: '0.8rem'
+                                        }}>
+                                            <a
+                                                href={`https://solscan.io/account/${whale.address}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#fbbf24', textDecoration: 'none', fontFamily: 'monospace', marginBottom: '4px' }}
+                                            >
+                                                {whale.address.slice(0, 4)}...{whale.address.slice(-4)}
+                                            </a>
+                                            <span style={{ color: '#ccc', fontSize: '0.75rem' }}>
+                                                {Math.round(whale.balance).toLocaleString()} SOL
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: '#888', fontSize: '0.9rem' }}>No whales detected (&gt;25 SOL).</p>
+                            )}
+                        </div>
+
                         <div className={styles.clusteringVisual}>
                             <h3>👛 Wallet Clustering</h3>
                             <p className={styles.clusterInfo}>

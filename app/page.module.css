@@ -278,15 +278,13 @@
   width: 220px;
   padding: 24px;
   background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%);
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.01) 100%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 .leftCard {
@@ -395,16 +393,17 @@
   max-width: 320px;
   padding: 32px;
   background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.03) 100%);
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.02) 100%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(204, 255, 0, 0.3);
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  /* Softer primary border */
   border-radius: var(--radius-xl);
   box-shadow:
     0 40px 80px rgba(0, 0, 0, 0.5),
-    0 0 60px var(--primary-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 40px rgba(204, 255, 0, 0.1);
+  /* Softer glow */
   animation: floatCenter 6s ease-in-out infinite;
   z-index: 10;
 }
@@ -575,29 +574,84 @@
   gap: 24px;
 }
 
-/* Gold Glow Animation */
-@keyframes goldPulse {
+/* Glassmorphism Utilities */
+.glassPanel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.glassCard {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* White opacity border */
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glassCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%);
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+.glassCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.glassCard:hover::before {
+  opacity: 1;
+}
+
+/* Input Polish */
+.demoInput {
+  background: rgba(10, 10, 10, 0.6);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.demoInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: rgba(15, 15, 15, 0.8);
+}
+
+/* Gold Glow Update */
+@keyframes bloomAlpha {
 
   0%,
   100% {
-    opacity: 0.3;
-    transform: scale(1);
+    opacity: 0.4;
   }
 
   50% {
-    opacity: 0.6;
-    transform: scale(1.05);
+    opacity: 0.8;
   }
 }
 
 .goldGlow {
-  position: absolute;
-  inset: -2px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+  background: radial-gradient(circle at center, var(--primary) 0%, transparent 70%);
+  filter: blur(40px);
+  opacity: 0.5;
+  animation: bloomAlpha 4s infinite ease-in-out;
   z-index: -1;
-  animation: goldPulse 3s infinite;
-  filter: blur(10px);
 }
 
 .demoResult {
@@ -814,6 +868,21 @@
 .waitlistInput:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+.waitlistSuccess {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(204, 255, 0, 0.1);
+  border: 1px solid var(--primary);
+  border-radius: 100px;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 15px;
+  animation: slideUp 0.3s ease-out;
 }
 
 .mobileVisual {
@@ -1127,16 +1196,11 @@
 .pricingCard,
 .dashboardCard,
 .ctaCard {
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1666,4 +1730,180 @@
   background: var(--primary-dim);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px var(--primary-glow);
+}
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 768px) {
+
+  /* Header */
+  .header {
+    padding: 12px 16px;
+  }
+
+  .logo {
+    height: 28px;
+  }
+
+  .headerCta {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  /* Hero Section */
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 100px 24px 60px;
+    gap: 48px;
+    text-align: center;
+    height: auto;
+    min-height: auto;
+  }
+
+  .heroBgImage {
+    width: 100%;
+    opacity: 0.2;
+  }
+
+  .heroTitle {
+    font-size: 36px;
+    letter-spacing: -1px;
+  }
+
+  .heroSubtitle {
+    font-size: 16px;
+    margin: 0 auto 32px;
+  }
+
+  .heroCtas {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .ctaPrimary,
+  .ctaSecondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Stats Ticker */
+  .statsTicker {
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    border-radius: 24px;
+    padding: 20px;
+  }
+
+  .statItem {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .statDivider {
+    width: 100%;
+    height: 1px;
+    margin: 4px 0;
+  }
+
+  /* Hero Visual Cards */
+  .heroCardsContainer {
+    flex-direction: column;
+    gap: 24px;
+    transform: scale(0.9);
+    margin-top: 20px;
+  }
+
+  .sideCard,
+  .dashboardCard {
+    width: 100%;
+    max-width: 320px;
+    /* Reset 3D effects for cleaner mobile stacking */
+    transform: none !important;
+    animation: floatCenter 6s ease-in-out infinite !important;
+    /* Keep a gentle float for all */
+    margin: 0;
+  }
+
+  .leftCard,
+  .rightCard {
+    /* Override specific side rotations */
+    transform: none !important;
+    animation: floatCenter 6s ease-in-out infinite !important;
+    animation-delay: 1s;
+    /* Stagger slightly */
+  }
+
+  /* Sections General */
+  .section {
+    padding: 60px 24px;
+  }
+
+  .sectionTitle {
+    font-size: 28px;
+  }
+
+  /* Features Grid */
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Demo Interactive Section */
+  .demoContainer {
+    width: 100%;
+  }
+
+  .demoInputWrapper {
+    flex-direction: column;
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 12px;
+    box-shadow: none;
+  }
+
+  .demoInput {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .demoButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .demoMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  /* Footer & Pre-Footer Fixes */
+  .ctaSection {
+    padding: 40px 16px;
+  }
+
+  .ctaCard {
+    padding: 32px 20px;
+  }
+
+  .footer {
+    padding: 48px 20px 24px;
+  }
+
+  .pricingCard {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .phoneMockupWrapper {
+    transform: scale(0.85);
+  }
 }

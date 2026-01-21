@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import PremiumModal from '@/components/PremiumModal';
@@ -11,12 +11,41 @@ import PremiumModal from '@/components/PremiumModal';
 export default function AppHome() {
     const router = useRouter();
     const [contractAddress, setContractAddress] = useState('');
+    const [mode, setMode] = useState('token'); // 'token' | 'wallet'
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [walletAddress, setWalletAddress] = useState(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
     const [showConnectModal, setShowConnectModal] = useState(true);
     const [recentScans, setRecentScans] = useState([]);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+    const handleLogin = useCallback(async (address) => {
+        setWalletAddress(address);
+        localStorage.setItem('memesense_wallet', address);
+        setIsLoadingAuth(true);
+        setShowConnectModal(false);
+
+        try {
+            const res = await fetch('/api/user/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletAddress: address })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                if (!data.user.isOnboarded) {
+                    router.push('/onboarding');
+                } else {
+                    // User is authenticated and onboarded
+                    setIsLoadingAuth(false);
+                }
+            }
+        } catch (err) {
+            console.error("Login failed", err);
+            setIsLoadingAuth(false); // Make sure to unblock if API fails
+        }
+    }, [router]);
 
     // Fetch recent scans
     useEffect(() => {
@@ -65,7 +94,7 @@ export default function AppHome() {
 
         // Delay slightly to prevent flash
         setTimeout(checkWallet, 500);
-    }, []);
+    }, [handleLogin]);
 
     const handleConnect = async () => {
         if (window.solana && window.solana.isPhantom) {
@@ -93,40 +122,19 @@ export default function AppHome() {
         setShowConnectModal(true);
     };
 
-    const handleLogin = async (address) => {
-        setWalletAddress(address);
-        localStorage.setItem('memesense_wallet', address);
-        setIsLoadingAuth(true);
-        setShowConnectModal(false);
+    // Moved to top for hoisting
 
-        try {
-            const res = await fetch('/api/user/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ walletAddress: address })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                if (!data.user.isOnboarded) {
-                    router.push('/onboarding');
-                } else {
-                    // User is authenticated and onboarded
-                    setIsLoadingAuth(false);
-                }
-            }
-        } catch (err) {
-            console.error("Login failed", err);
-            setIsLoadingAuth(false); // Make sure to unblock if API fails
-        }
-    };
 
     const handleAnalyze = (e) => {
         e.preventDefault();
         if (!contractAddress) return;
 
         setIsAnalyzing(true);
-        router.push(`/analyze/${contractAddress}`);
+        if (mode === 'wallet') {
+            router.push(`/profit/${contractAddress}`);
+        } else {
+            router.push(`/analyze/${contractAddress}`);
+        }
     };
 
     if (isLoadingAuth) {
@@ -213,18 +221,56 @@ export default function AppHome() {
 
                 <div className={styles.hero}>
                     <h1 className={styles.heroTitle}>
-                        Analyze Any Token
+                        {mode === 'token' ? 'Analyze Any Token' : 'Track Profitability'}
                     </h1>
                     <p className={styles.heroSubtitle}>
-                        Enter a Solana token address to get instant AI-powered analysis
+                        {mode === 'token'
+                            ? 'Enter a Solana token address to get instant AI-powered analysis'
+                            : 'Enter a wallet address to spy on trades and performance'}
                     </p>
+
+                    {/* Tab Switcher */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 24, marginTop: 24 }}>
+                        <button
+                            onClick={() => { setMode('token'); setContractAddress(''); }}
+                            style={{
+                                background: mode === 'token' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'token' ? '#ccff00' : '#888',
+                                border: mode === 'token' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Token Analysis
+                        </button>
+                        <button
+                            onClick={() => { setMode('wallet'); setContractAddress(''); }}
+                            style={{
+                                background: mode === 'wallet' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'wallet' ? '#ccff00' : '#888',
+                                border: mode === 'wallet' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Profit Tracker
+                        </button>
+                    </div>
 
                     <form onSubmit={handleAnalyze} className={styles.searchForm}>
                         <div className={styles.inputWrapper}>
                             <input
                                 type="text"
                                 className={styles.caInput}
-                                placeholder="Paste token address (e.g., pump...)"
+                                placeholder={mode === 'token' ? "Paste token address (e.g., pump...)" : "Paste wallet address..."}
                                 value={contractAddress}
                                 onChange={(e) => setContractAddress(e.target.value)}
                             />

@@ -9,7 +9,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        const user = getOrCreateUser({ walletAddress });
+        const user = await getOrCreateUser({ walletAddress });
 
         return NextResponse.json({
             success: true,

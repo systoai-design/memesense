@@ -1,4 +1,4 @@
-/* Analysis Page Styles - Premium Glassmorphism Design */
+/* Analysis Page Styles - Solid Glass Design */
 
 .container {
     min-height: 100vh;
@@ -6,18 +6,19 @@
     max-width: 1400px;
     margin: 0 auto;
     position: relative;
+    /* Clean Solid Glass Background - No Gradient */
+    background: transparent;
 }
 
-/* Parallax Background (inherited from global) */
-.container::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-        radial-gradient(circle at 80% 20%, rgba(0, 212, 126, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 20% 80%, rgba(0, 180, 216, 0.1) 0%, transparent 40%);
-    pointer-events: none;
-    z-index: -1;
+/* Glass Utility - replicating .glassCard from page.module.css */
+.glassPanel {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Consistent border */
+    border-radius: var(--radius-xl);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
@@ -29,47 +30,126 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    z-index: 10;
 }
 
 .loadingContent {
     text-align: center;
-    padding: 48px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
+    padding: 60px;
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 1),
+        0 20px 50px rgba(0, 0, 0, 0.5);
+    min-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--primary);
+    border-right: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    margin-bottom: 24px;
+    box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
 .loadingContent h2 {
     margin-top: 24px;
     font-size: 24px;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
 }
 
 .loadingContent p {
     color: var(--text-secondary);
     margin-top: 8px;
+    font-size: 14px;
 }
 
 .loadingSteps {
-    margin-top: 32px;
+    margin-top: 40px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
 }
 
 .step {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
     color: var(--text-secondary);
-    animation: pulse 1.5s infinite;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.step:nth-child(1) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.1s;
+    opacity: 0;
+}
+
+.step:nth-child(2) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.3s;
+    opacity: 0;
+}
+
+.step:nth-child(3) {
+    animation: slideIn 0.4s ease-out forwards;
+    animation-delay: 0.5s;
+    opacity: 0;
 }
 
 .stepIcon {
-    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    color: var(--text-muted);
+}
+
+.step:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ============================================
@@ -86,9 +166,9 @@
 .errorContent {
     text-align: center;
     padding: 48px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
 }
 
@@ -117,9 +197,10 @@
     align-items: center;
     margin-bottom: 32px;
     padding: 16px 24px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Consistent border */
     border-radius: var(--radius-lg);
 }
 
@@ -234,9 +315,9 @@
     flex-wrap: wrap;
     gap: 24px;
     padding: 24px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-lg);
 }
 
@@ -405,9 +486,9 @@
 .profitCard {
     text-align: center;
     padding: 32px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
 }
 
@@ -541,9 +622,9 @@
    ============================================ */
 
 .metricsSection {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
     padding: 32px;
 }
@@ -607,9 +688,9 @@
 
 .bondingCard {
     padding: 32px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
 }
 
@@ -640,19 +721,21 @@
 }
 
 .progressBg {
-    stroke: var(--bg-tertiary);
+    stroke: rgba(255, 255, 255, 0.1);
 }
 
 .progressFill {
-    stroke: var(--success);
+    stroke: var(--primary);
     stroke-linecap: round;
     transition: stroke-dasharray 1s ease;
+    /* Removed heavy glow for cleaner look */
 }
 
 .progressValue {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 800;
-    fill: var(--success);
+    fill: #ffffff;
+    /* Explicit white for maximum visibility */
 }
 
 
@@ -781,9 +864,9 @@
 .insightsCard {
     margin-bottom: 32px;
     padding: 32px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-xl);
 }
 

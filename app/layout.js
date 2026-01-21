@@ -35,6 +35,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable}`}>
         {children}
+        <script src="https://terminal.jup.ag/main-v3.js" data-preload></script>
       </body>
     </html>
   );

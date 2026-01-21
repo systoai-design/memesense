@@ -7,38 +7,38 @@
 :root {
     /* Primary Colors - Neon Green Accent */
     --primary: #CCFF00;
-    --primary-dark: #A3CC00;
-    --primary-light: #D9FF33;
+    --primary-dim: #A3CC00;
     --primary-glow: rgba(204, 255, 0, 0.4);
+    --primary-glow-strong: rgba(204, 255, 0, 0.6);
 
-    /* Semantic Colors */
-    --success: #CCFF00;
-    --warning: #FFD600;
-    --danger: #FF3333;
-    --info: #00E5FF;
+    /* Status Colors */
+    --success: #00D47E;
+    --warning: #FFB800;
+    --danger: #FF4D6D;
 
-    /* Background Colors - Deep Black Theme */
-    --bg-primary: #0A0A0A;
-    --bg-secondary: #111111;
-    --bg-tertiary: #161616;
-    --bg-card: rgba(22, 22, 22, 0.8);
-    --bg-glass: rgba(22, 22, 22, 0.6);
+    /* Background Colors - OLED Black */
+    --bg-primary: #050505;
+    --bg-secondary: #0A0A0A;
+    --bg-tertiary: #111111;
+    --bg-card: rgba(18, 18, 18, 0.7);
+    --bg-glass: rgba(10, 10, 10, 0.6);
 
     /* Text Colors */
     --text-primary: #FFFFFF;
-    --text-secondary: #A0A0A0;
-    --text-muted: #666666;
-    --text-light: #444444;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.4);
 
     /* Border Colors */
+    --border: rgba(255, 255, 255, 0.08);
+    /* Re-adding generic border */
     --border-color: rgba(255, 255, 255, 0.08);
-    --border-light: rgba(255, 255, 255, 0.04);
+    --border-light: rgba(255, 255, 255, 0.12);
     --border-glow: rgba(204, 255, 0, 0.3);
 
-    /* Glass Effect - Softer */
-    --glass-bg: rgba(22, 22, 22, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.05);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    /* Glass Effect */
+    --glass-bg: rgba(10, 10, 10, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     --glass-blur: blur(16px);
 
     /* Shadows - Removed */

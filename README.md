@@ -42,7 +42,7 @@ Create a `.env.local` file with:
 
 ```env
 # Required for AI Analysis
-GEMINI_API_KEY=your_gemini_api_key
+GROK_API_KEY=your_grok_api_key
 
 # Optional - for enhanced data
 BITQUERY_API_KEY=your_bitquery_api_key

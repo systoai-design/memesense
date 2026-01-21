@@ -1,8 +1,24 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+    Rocket,
+    Sparkles,
+    ShieldAlert,
+    Search,
+    Zap,
+    BarChart3,
+    Lock,
+    Smartphone,
+    Check,
+    ChevronRight,
+    TrendingUp,
+    AlertTriangle,
+    X
+} from 'lucide-react';
 import styles from './page.module.css';
-// Branding Updated: Powered by Grok
 
 // ===== SCROLL REVEAL HOOK =====
 const useScrollReveal = (threshold = 0.1) => {
@@ -132,56 +148,87 @@ const PhoneMockup = () => {
 
 // ===== INTERACTIVE DEMO COMPONENT =====
 const DemoSection = () => {
-    const [ca, setCa] = useState('');
+    const [input, setInput] = useState('');
+    const [mode, setMode] = useState('token'); // 'token' | 'wallet'
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
 
-    const analyzeToken = async (e) => {
+    const handleAnalyze = async (e) => {
         e.preventDefault();
-        if (!ca.trim()) return;
+        if (!input.trim()) return;
 
         setLoading(true);
         setError('');
         setResult(null);
 
         try {
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ca: ca.trim(), deviceId: 'demo-landing' })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Determine verdict
-                let verdict = 'WAIT';
-                let verdictEmoji = '⏳';
-                let verdictColor = '#FFB800';
-
-                if (data.analysis?.recommendation === 'BUY' || data.analysis?.profitProbability > 60) {
-                    verdict = 'BUY';
-                    verdictEmoji = '🟢';
-                    verdictColor = '#CCFF00';
-                } else if (data.analysis?.recommendation === 'AVOID' || data.analysis?.profitProbability < 30) {
-                    verdict = 'RUN';
-                    verdictEmoji = '🔴';
-                    verdictColor = '#FF4444';
-                }
-
-                setResult({
-                    token: data.token,
-                    verdict,
-                    verdictEmoji,
-                    verdictColor,
-                    probability: data.analysis?.profitProbability || 50,
-                    riskLevel: data.analysis?.riskLevel || 'MEDIUM',
-                    holders: data.holders?.total || 0,
-                    imageUrl: data.token?.imageUrl // Add image URL from API
+            // WALLET MODE
+            if (mode === 'wallet') {
+                const response = await fetch('/api/profit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletToAnalyze: input.trim(), deviceId: 'demo-landing' })
                 });
-            } else {
-                setError(data.error || 'Analysis failed');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const payload = data.data;
+                    const metrics = payload.summary?.all || {};
+                    const ai = payload.aiVerdict || {};
+
+                    setResult({
+                        type: 'wallet',
+                        totalProfit: metrics.totalRealizedPnL || 0,
+                        winRate: metrics.winRate || 0,
+                        realizedPnL: metrics.totalRealizedPnL || 0,
+                        trades: metrics.totalTrades || 0,
+                        verdict: ai.status || (metrics.totalRealizedPnL > 0 ? 'PROFITABLE' : 'UNPROFITABLE'),
+                        verdictColor: ai.score >= 50 ? '#CCFF00' : '#FF4444' // Simple logic, or extract from aiStatus
+                    });
+                } else {
+                    setError(data.error || 'Tracker analysis failed');
+                }
+            }
+            // TOKEN MODE
+            else {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ca: input.trim(), deviceId: 'demo-landing' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let verdict = 'WAIT';
+                    let verdictEmoji = '⏳';
+                    let verdictColor = '#FFB800';
+
+                    if (data.analysis?.recommendation === 'BUY' || data.analysis?.profitProbability > 60) {
+                        verdict = 'BUY';
+                        verdictEmoji = '🟢';
+                        verdictColor = '#CCFF00';
+                    } else if (data.analysis?.recommendation === 'AVOID' || data.analysis?.profitProbability < 30) {
+                        verdict = 'RUN';
+                        verdictEmoji = '🔴';
+                        verdictColor = '#FF4444';
+                    }
+
+                    setResult({
+                        type: 'token',
+                        token: data.token,
+                        verdict,
+                        verdictEmoji,
+                        verdictColor,
+                        probability: data.analysis?.profitProbability || 50,
+                        riskLevel: data.analysis?.riskLevel || 'MEDIUM',
+                        holders: data.holders?.total || 0,
+                        imageUrl: data.token?.imageUrl
+                    });
+                } else {
+                    setError(data.error || 'Sense analysis failed');
+                }
             }
         } catch (err) {
             setError('Failed to connect. Try again.');
@@ -198,31 +245,67 @@ const DemoSection = () => {
                     Free <span className={styles.heroTitleGradient}>Instant Demo</span>
                 </h2>
                 <p className={styles.sectionSubtitle}>
-                    Paste any pump.fun token address and get an instant verdict
+                    {mode === 'token'
+                        ? 'Paste any pump.fun token address to get an instant verdict'
+                        : 'Paste a wallet address to sense its historical profitability'}
                 </p>
             </Reveal>
 
             <Reveal delay={100}>
                 <div className={styles.demoContainer}>
-                    <form onSubmit={analyzeToken} className={styles.demoForm}>
+                    {/* Tab Switcher */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+                        <button
+                            onClick={() => { setMode('token'); setResult(null); setError(''); }}
+                            style={{
+                                background: mode === 'token' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'token' ? '#ccff00' : '#888',
+                                border: mode === 'token' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Token Sense
+                        </button>
+                        <button
+                            onClick={() => { setMode('wallet'); setResult(null); setError(''); }}
+                            style={{
+                                background: mode === 'wallet' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'wallet' ? '#ccff00' : '#888',
+                                border: mode === 'wallet' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Profit Tracker
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleAnalyze} className={styles.demoForm}>
                         <div className={styles.demoInputWrapper}>
                             <input
                                 type="text"
-                                value={ca}
-                                onChange={(e) => setCa(e.target.value)}
-                                placeholder="Paste token contract address..."
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder={mode === 'token' ? "Paste token contract address..." : "Paste wallet address..."}
                                 className={styles.demoInput}
                                 disabled={loading}
                             />
                             <button
                                 type="submit"
                                 className={styles.demoButton}
-                                disabled={loading || !ca.trim()}
+                                disabled={loading || !input.trim()}
                             >
                                 {loading ? (
                                     <span className={styles.demoSpinner}></span>
                                 ) : (
-                                    'Analyze'
+                                    'Sense'
                                 )}
                             </button>
                         </div>
@@ -234,7 +317,8 @@ const DemoSection = () => {
                         </div>
                     )}
 
-                    {result && (
+                    {/* TOKEN RESULT */}
+                    {result && result.type === 'token' && (
                         <div className={styles.demoResult}>
                             <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
                                 <span className={styles.demoVerdictEmoji}>{result.verdictEmoji}</span>
@@ -256,16 +340,10 @@ const DemoSection = () => {
                                             />
                                         ) : (
                                             <div style={{
-                                                width: '24px',
-                                                height: '24px',
-                                                borderRadius: '50%',
+                                                width: '24px', height: '24px', borderRadius: '50%',
                                                 background: 'linear-gradient(135deg, #666, #333)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '10px',
-                                                fontWeight: 'bold',
-                                                color: '#fff',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '10px', fontWeight: 'bold', color: '#fff',
                                                 border: '1px solid rgba(255,255,255,0.2)'
                                             }}>
                                                 {result.token?.symbol?.[0] || '?'}
@@ -273,16 +351,10 @@ const DemoSection = () => {
                                         )}
                                         {/* Fallback hidden by default, shown on error */}
                                         <div className="fallback-icon" style={{
-                                            display: 'none',
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '50%',
+                                            display: 'none', width: '24px', height: '24px', borderRadius: '50%',
                                             background: 'linear-gradient(135deg, #666, #333)',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '10px',
-                                            fontWeight: 'bold',
-                                            color: '#fff',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '10px', fontWeight: 'bold', color: '#fff',
                                             border: '1px solid rgba(255,255,255,0.2)'
                                         }}>
                                             {result.token?.symbol?.[0] || '?'}
@@ -305,8 +377,41 @@ const DemoSection = () => {
                                 </div>
                             </div>
 
-                            <a href={`/analyze/${ca}`} className={styles.demoCta}>
+                            <a href={`/analyze/${input}`} className={styles.demoCta}>
                                 ✨ I Want Full Analysis
+                            </a>
+                        </div>
+                    )}
+
+                    {/* WALLET RESULT */}
+                    {result && result.type === 'wallet' && (
+                        <div className={styles.demoResult}>
+                            <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
+                                <span className={styles.demoVerdictEmoji}>{result.totalProfit > 0 ? '🚀' : '📉'}</span>
+                                <span className={styles.demoVerdictText} style={{ color: result.verdictColor }}>
+                                    {result.verdict}
+                                </span>
+                            </div>
+
+                            <div className={styles.demoMetrics}>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Win Rate</span>
+                                    <span className={styles.demoMetricValue}>{result.winRate}%</span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Total Profit</span>
+                                    <span className={styles.demoMetricValue} style={{ color: result.totalProfit >= 0 ? '#ccff00' : '#ff4444' }}>
+                                        {result.totalProfit.toFixed(2)} SOL
+                                    </span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Trades</span>
+                                    <span className={styles.demoMetricValue}>{result.trades}</span>
+                                </div>
+                            </div>
+
+                            <a href={`/profit/${input}`} className={styles.demoCta}>
+                                ✨ View Full History
                             </a>
                         </div>
                     )}
@@ -330,6 +435,17 @@ export default function Home() {
         return () => clearInterval(interval);
     }, []);
 
+    // Waitlist Logic
+    const [waitlistEmail, setWaitlistEmail] = useState('');
+    const [waitlistJoined, setWaitlistJoined] = useState(false);
+
+    const handleWaitlistSubmit = (e) => {
+        e.preventDefault();
+        if (!waitlistEmail) return;
+        setWaitlistJoined(true); // Simulate success
+        setWaitlistEmail('');
+    };
+
     return (
         <div className={styles.page}>
             {/* ===== HEADER ===== */}
@@ -352,13 +468,16 @@ export default function Home() {
                 </div>
 
                 <Reveal className={styles.heroContent}>
-                    <span className={styles.heroBadge}>✨ POWERED BY GROK • PREMIUM MEMECOIN TOOLS</span>
+                    <div className={styles.heroBadge}>
+                        <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} />
+                        Powered by Grok
+                    </div>
                     <h1 className={styles.heroTitle}>
-                        The Leading Platform for<br />
-                        <span className={styles.heroTitleGradient}>Memecoin Analysis</span>
+                        Sense Rugs & Gems <br />
+                        <span className={styles.heroTitleGradient}>Before they pump or dump</span>
                     </h1>
                     <p className={styles.heroSubtitle}>
-                        Sense danger before it even happens.
+                        Sense danger before it happens. Lessen your risk by sensing dangers beforehand
                     </p>
                     <div className={styles.heroCtas}>
                         <a href="/app" target="_blank" className={styles.ctaPrimary}>
@@ -404,7 +523,7 @@ export default function Home() {
                                     <span className={styles.entryValueHighlight}>+12x</span>
                                 </div>
                                 <div className={styles.entryVerdict}>
-                                    <span className={styles.verdictIcon}>🎯</span>
+                                    <span className={styles.verdictIcon}><Rocket size={14} /></span>
                                     ENTER NOW
                                 </div>
                             </div>
@@ -439,15 +558,15 @@ export default function Home() {
                             </div>
                             <div className={styles.sideCardContent}>
                                 <div className={styles.signalItem}>
-                                    <span className={styles.signalBullish}>🟢</span>
+                                    <span className={styles.signalBullish}><TrendingUp size={14} color="#CCFF00" /></span>
                                     Smart money accumulating
                                 </div>
                                 <div className={styles.signalItem}>
-                                    <span className={styles.signalWarning}>⚠️</span>
+                                    <span className={styles.signalWarning}><AlertTriangle size={14} color="#FFD600" /></span>
                                     Top 10 hold 42%
                                 </div>
                                 <div className={styles.signalItem}>
-                                    <span className={styles.signalBullish}>🟢</span>
+                                    <span className={styles.signalBullish}><Check size={14} color="#CCFF00" /></span>
                                     Dev wallet clean
                                 </div>
                             </div>
@@ -470,18 +589,18 @@ export default function Home() {
 
                 <div className={styles.featuresGrid}>
                     {[
-                        { icon: '👤', title: 'Dev Wallet Tracking', items: ['Dev wallet holdings %', 'Has dev sold? How much?', 'Dev transaction history', 'Previous rugs by same dev'] },
-                        { icon: '👥', title: 'Holder Distribution', items: ['Top 10/20/50 holder %', 'Wallet clustering detection', 'Bundled wallet warnings', 'Fresh wallet % (sybils)'] },
-                        { icon: '⚠️', title: 'Risk Signals', items: ['Sniper bot detection', 'Unusual price patterns', 'Liquidity concentration', 'Sell pressure alerts'] },
-                        { icon: '📊', title: 'Market Intelligence', items: ['Real-time buy/sell ratio', 'Volume momentum', 'Graduation probability', 'Raydium migration ETA'] },
+                        { icon: <Lock size={32} color="#CCFF00" />, title: 'Dev Wallet Tracking', items: ['Dev wallet holdings %', 'Has dev sold? How much?', 'Dev transaction history', 'Previous rugs by same dev'] },
+                        { icon: <BarChart3 size={32} color="#00E5FF" />, title: 'Holder Distribution', items: ['Top 10/20/50 holder %', 'Wallet clustering detection', 'Bundled wallet warnings', 'Fresh wallet % (sybils)'] },
+                        { icon: <ShieldAlert size={32} color="#FF3333" />, title: 'Risk Signals', items: ['Sniper bot detection', 'Unusual price patterns', 'Liquidity concentration', 'Sell pressure alerts'] },
+                        { icon: <TrendingUp size={32} color="#FFD600" />, title: 'Market Intelligence', items: ['Real-time buy/sell ratio', 'Volume momentum', 'Graduation probability', 'Raydium migration ETA'] },
                     ].map((feature, i) => (
                         <Reveal key={i} delay={i * 100}>
-                            <div className={styles.featureCard}>
+                            <div className={styles.glassCard}>
                                 <div className={styles.featureIcon}>{feature.icon}</div>
                                 <h3 className={styles.featureTitle}>{feature.title}</h3>
                                 <ul className={styles.featureList}>
                                     {feature.items.map((item, j) => (
-                                        <li key={j}><span className={styles.checkmark}>✓</span> {item}</li>
+                                        <li key={j}><Check size={14} className={styles.checkmark} /> {item}</li>
                                     ))}
                                 </ul>
                             </div>
@@ -515,7 +634,7 @@ export default function Home() {
                         <div className={styles.step}>
                             <div className={styles.stepNumber}>2</div>
                             <h3 className={styles.stepTitle}>AI Analyzes</h3>
-                            <p className={styles.stepDesc}>Grok AI scans 15+ on-chain & market signals</p>
+                            <p className={styles.stepDesc}>Grok AI senses 15+ on-chain & market signals</p>
                         </div>
                     </Reveal>
                     <span className={styles.stepArrow}>→</span>
@@ -524,6 +643,42 @@ export default function Home() {
                             <div className={styles.stepNumber}>3</div>
                             <h3 className={styles.stepTitle}>Get Verdict</h3>
                             <p className={styles.stepDesc}>Receive BUY, WAIT, or AVOID recommendation</p>
+                        </div>
+                    </Reveal>
+                </div>
+            </section>
+
+            {/* ===== WALLET HOW IT WORKS ===== */}
+            <section className={styles.section}>
+                <Reveal className={styles.sectionHeader}>
+                    <span className={styles.sectionBadge}>🕵️‍♂️ PROFIT TRACKER</span>
+                    <h2 className={styles.sectionTitle}>
+                        Track Master Traders in <span className={styles.heroTitleGradient}>Real-Time</span>
+                    </h2>
+                </Reveal>
+
+                <div className={styles.stepsGrid}>
+                    <Reveal delay={0}>
+                        <div className={styles.step}>
+                            <div className={styles.stepNumber}>1</div>
+                            <h3 className={styles.stepTitle}>Enter Wallet</h3>
+                            <p className={styles.stepDesc}>Paste any Solana wallet address to track</p>
+                        </div>
+                    </Reveal>
+                    <span className={styles.stepArrow}>→</span>
+                    <Reveal delay={150}>
+                        <div className={styles.step}>
+                            <div className={styles.stepNumber}>2</div>
+                            <h3 className={styles.stepTitle}>Deep Sense</h3>
+                            <p className={styles.stepDesc}>AI analyzes 1000+ historical trades & PnL</p>
+                        </div>
+                    </Reveal>
+                    <span className={styles.stepArrow}>→</span>
+                    <Reveal delay={300}>
+                        <div className={styles.step}>
+                            <div className={styles.stepNumber}>3</div>
+                            <h3 className={styles.stepTitle}>See Profitability</h3>
+                            <p className={styles.stepDesc}>Get Win Rate, Total Gains & Trader Score</p>
                         </div>
                     </Reveal>
                 </div>
@@ -543,15 +698,15 @@ export default function Home() {
 
                 <div className={styles.speedGrid}>
                     {[
-                        { icon: '⚡', title: 'Live Updates', desc: 'Data refreshes every 10 seconds automatically' },
-                        { icon: '🤖', title: 'AI Insights', desc: 'Grok-powered analysis explains WHY to buy or avoid' },
-                        { icon: '👤', title: 'Dev Tracking', desc: 'Know if dev has sold and how much they hold' },
-                        { icon: '🕵️', title: 'Cluster Detection', desc: 'Identifies bundled wallets and coordinated buying' },
-                        { icon: '📈', title: 'Graduation Tracker', desc: 'Track bonding curve and Raydium migration progress' },
-                        { icon: '🚨', title: 'Risk Alerts', desc: 'Instant warnings for rug pull patterns' },
+                        { icon: <Zap size={28} color="#CCFF00" />, title: 'Live Updates', desc: 'Data refreshes every 10 seconds automatically' },
+                        { icon: <Sparkles size={28} color="#00E5FF" />, title: 'AI Insights', desc: 'Grok-powered analysis explains WHY to buy or avoid' },
+                        { icon: <Lock size={28} color="#FF3333" />, title: 'Dev Tracking', desc: 'Know if dev has sold and how much they hold' },
+                        { icon: <Search size={28} color="#FFD600" />, title: 'Cluster Detection', desc: 'Identifies bundled wallets and coordinated buying' },
+                        { icon: <TrendingUp size={28} color="#CCFF00" />, title: 'Graduation Tracker', desc: 'Track bonding curve and Raydium migration progress' },
+                        { icon: <AlertTriangle size={28} color="#FF3333" />, title: 'Risk Alerts', desc: 'Instant warnings for rug pull patterns' },
                     ].map((item, i) => (
                         <Reveal key={i} delay={i * 80}>
-                            <div className={styles.speedCard}>
+                            <div className={styles.glassCard}>
                                 <div className={styles.speedIcon}>{item.icon}</div>
                                 <h3 className={styles.speedTitle}>{item.title}</h3>
                                 <p className={styles.speedDesc}>{item.desc}</p>
@@ -565,7 +720,10 @@ export default function Home() {
             <section className={styles.section}>
                 <div className={styles.mobileSection}>
                     <Reveal className={styles.mobileContent}>
-                        <span className={styles.sectionBadge}>📱 COMING SOON</span>
+                        <div className={styles.sectionBadge}>
+                            <Smartphone size={14} style={{ display: 'inline', marginRight: 6 }} />
+                            COMING SOON
+                        </div>
                         <h2 className={styles.mobileTitle}>
                             Analysis on the Go.<br />
                             <span className={styles.heroTitleGradient}>Pocket Terminals.</span>
@@ -575,14 +733,28 @@ export default function Home() {
                             Get push notifications for whale movements and rug alerts instantly.
                         </p>
                         <ul className={styles.mobileFeatures}>
-                            <li><span className={styles.checkmark}>✓</span> Instant Push Notifications</li>
-                            <li><span className={styles.checkmark}>✓</span> Biometric Login</li>
-                            <li><span className={styles.checkmark}>✓</span> One-tap Quick Scan</li>
+                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> Instant Push Notifications</li>
+                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> Biometric Login</li>
+                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> One-tap Quick Sense</li>
                         </ul>
-                        <div className={styles.waitlistForm}>
-                            <input type="email" placeholder="Enter your email" className={styles.waitlistInput} />
-                            <button className={styles.ctaPrimary}>Join Waitlist</button>
-                        </div>
+                        {waitlistJoined ? (
+                            <div className={styles.waitlistSuccess}>
+                                <Check size={20} />
+                                <span>We will inform you for the release! 🚀</span>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleWaitlistSubmit} className={styles.waitlistForm}>
+                                <input
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    className={styles.waitlistInput}
+                                    value={waitlistEmail}
+                                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                                    required
+                                />
+                                <button type="submit" className={styles.ctaPrimary}>Join Waitlist</button>
+                            </form>
+                        )}
                     </Reveal>
 
                     <Reveal className={styles.mobileVisual} delay={200}>
@@ -594,7 +766,10 @@ export default function Home() {
             {/* ===== PRICING ===== */}
             <section id="pricing" className={styles.section}>
                 <Reveal className={styles.sectionHeader}>
-                    <span className={styles.sectionBadge}>💎 PRICING</span>
+                    <div className={styles.sectionBadge}>
+                        <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} />
+                        PRICING
+                    </div>
                     <h2 className={styles.sectionTitle}>
                         Start Free, <span className={styles.heroTitleGradient}>Scale When Ready</span>
                     </h2>
@@ -612,13 +787,13 @@ export default function Home() {
                                 <div className={styles.pricingPeriod}>Forever free</div>
                             </div>
                             <ul className={styles.pricingFeatures}>
-                                <li>✓ <strong>10</strong> analyses / day</li>
-                                <li>✓ Real-time market data</li>
-                                <li>✓ Basic AI insights</li>
-                                <li>✓ Top 10 holder view</li>
-                                <li style={{ color: 'var(--text-muted)' }}>✕ No Whale Tracking</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> <strong>10</strong> analyses / day</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Real-time market data</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Basic AI insights</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Top 10 holder view</li>
+                                <li style={{ color: 'var(--text-muted)' }}><X size={14} style={{ marginRight: 8 }} /> No Whale Tracking</li>
                             </ul>
-                            <a href="/app" target="_blank" className={`${styles.pricingCta} ${styles.pricingCtaFree}`}>
+                            <a href="/upgrade" className={`${styles.pricingCta} ${styles.pricingCtaFree}`}>
                                 Get Started Free
                             </a>
                         </div>
@@ -636,15 +811,16 @@ export default function Home() {
                                 <div className={styles.pricingPeriod}>One-time payment</div>
                             </div>
                             <ul className={styles.pricingFeatures}>
-                                <li>✓ <strong>UNLIMITED</strong> Analyses</li>
-                                <li>✓ Dev wallet tracking & History</li>
-                                <li>✓ Wallet clustering alerts</li>
-                                <li>✓ Top 100 holder details</li>
-                                <li>✓ Sniper bot detection</li>
-                                <li>✓ AI Chart Analysis</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> <strong>UNLIMITED</strong> Analyses</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Wallet Profitability Tracking</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Dev wallet tracking & History</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Wallet clustering alerts</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Top 100 holder details</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> Sniper bot detection</li>
+                                <li><Check size={14} color="#CCFF00" style={{ marginRight: 8 }} /> AI Chart Analysis</li>
                             </ul>
-                            <a href="/app" target="_blank" className={`${styles.pricingCta} ${styles.pricingCtaPremium}`}>
-                                🚀 Get Premium (0.5 SOL)
+                            <a href="/upgrade" className={`${styles.pricingCta} ${styles.pricingCtaPremium}`}>
+                                <Rocket size={16} /> Get Premium (0.5 SOL)
                             </a>
                         </div>
                     </Reveal>
@@ -658,7 +834,7 @@ export default function Home() {
                         <h2 className={styles.ctaTitle}>Ready to Trade Smarter?</h2>
                         <p className={styles.ctaDesc}>Analyze any pump.fun token in seconds. Free forever.</p>
                         <a href="/app" target="_blank" className={styles.ctaPrimary}>
-                            🚀 Launch App Now
+                            <Rocket size={18} /> Launch App Now
                         </a>
                     </div>
                 </Reveal>
@@ -681,6 +857,6 @@ export default function Home() {
                     © 2026 MemeSense. All rights reserved.
                 </div>
             </footer>
-        </div>
+        </div >
     );
 }

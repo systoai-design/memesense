@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 
 // Import modules
 import { getTokenData, getHolderData, getBondingCurveData, getOHLCVData } from '@/lib/dexscreener';
-import { getSniperData, getRealHolderData, getUniqueBuyers, getDevWalletStatus, getTokenAuthorities, getWhaleAnalysis } from '@/lib/solana';
+import { getSniperData, getRealHolderData, getUniqueBuyers, getDevWalletStatus, getTokenAuthorities, getWhaleAnalysis, getTotalHolderCount } from '@/lib/solana';
 import { analyzeMetrics } from '@/lib/gemini';
 import { getOrCreateUser, canUseAnalysis, recordUsage, getTierInfo, initDatabase, hasUserScanned, recordScan } from '@/lib/db';
 
@@ -42,9 +42,9 @@ export async function POST(request) {
 
         // Get User & Check Limits
         const walletAddress = body.walletAddress;
-        const user = getOrCreateUser({ deviceId, walletAddress });
+        const user = await getOrCreateUser({ deviceId, walletAddress });
 
-        const usageCheck = canUseAnalysis(user.id);
+        const usageCheck = await canUseAnalysis(user.id);
         if (!usageCheck.allowed) {
             return NextResponse.json({
                 success: false,
@@ -60,18 +60,36 @@ export async function POST(request) {
         const isAdmin = walletAddress && walletAddress === process.env.ADMIN_WALLET;
         const skipUsageRecord = isAdmin || hasUserScanned(user.id, ca);
 
-        // Fetch all data in parallel
-        // Note: holderData is now a hybrid. We try RPC first, merge with DexScreener estimate for total count.
-        const [tokenData, estHolderData, bondingData, ohlcvData, sniperData, realHolderData, uniqueBuyersCount, tokenAuthorityData] = await Promise.all([
-            getTokenData(ca),
-            getHolderData(ca), // Keep for total count estimate
-            getBondingCurveData(ca),
-            getOHLCVData(ca, '15m'),
-            getSniperData(ca).catch(err => ({ isEstimated: true, error: err.message })),
-            getRealHolderData(ca).catch(err => ({ isEstimated: true, error: err.message })),
-            getUniqueBuyers(ca).catch(err => 0),
-            getTokenAuthorities(ca).catch(err => ({ burnPercent: 0, isRenounced: false, isFreezeRevoked: false, isEstimated: true }))
+        // Helper for timing
+        const timeOp = async (name, fn) => {
+            console.time(name);
+            try {
+                const res = await fn;
+                console.timeEnd(name);
+                return res;
+            } catch (e) {
+                console.timeEnd(name);
+                console.error(`${name} failed:`, e.message);
+                throw e; // Rethrow to let Promise.all handling work or be caught below
+            }
+        };
+
+        // Fetch all data in parallel with logging
+        const [tokenData, estHolderData, bondingData, sniperData, realHolderData, tokenAuthorityData, realTotalHolders] = await Promise.all([
+            timeOp('getTokenData', getTokenData(ca)),
+            timeOp('getHolderData', getHolderData(ca)),
+            timeOp('getBondingCurveData', getBondingCurveData(ca)),
+            timeOp('getSniperData', getSniperData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
+            timeOp('getRealHolderData', getRealHolderData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
+            // getUniqueBuyers removed for speed
+            timeOp('getTokenAuthorities', getTokenAuthorities(ca).catch(err => ({ burnPercent: 0, isRenounced: false, isFreezeRevoked: false, isEstimated: true }))),
+            timeOp('getTotalHolderCount', getTotalHolderCount(ca).catch(err => null))
         ]);
+
+        const uniqueBuyersCount = 0; // Disabled for performance
+
+        // Mock ohlcvData since we removed the fetch, in case downstream logic needs it (though it shouldn't)
+        const ohlcvData = [];
 
         // Merge Holder Data
         const holderData = {
@@ -82,6 +100,11 @@ export async function POST(request) {
                 isEstimated: false // Critical metrics are real
             } : {})
         };
+
+        // Override total holders if we got real data
+        if (realTotalHolders) {
+            holderData.totalHolders = realTotalHolders;
+        }
 
         // Calculate additional metrics
         const ageHours = tokenData.ageHours || 0;
@@ -138,17 +161,15 @@ export async function POST(request) {
             } else {
                 console.log('Gemini returned success=false:', geminiResult.error);
                 // Try OpenAI as fallback
+                /* 
                 console.log('Trying OpenAI fallback...');
-                const { analyzeWithOpenAI } = require('@/lib/openai-analyze');
-                const openaiResult = await analyzeWithOpenAI(analysisInput);
-                if (openaiResult.success) {
-                    aiAnalysis = openaiResult.analysis;
-                    console.log('OpenAI AI analysis successful');
-                }
-                if (openaiResult.success) {
-                    aiAnalysis = openaiResult.analysis;
-                    console.log('OpenAI AI analysis successful');
-                }
+                // const { analyzeWithOpenAI } = require('@/lib/openai-analyze');
+                // const openaiResult = await analyzeWithOpenAI(analysisInput);
+                // if (openaiResult.success) {
+                //     aiAnalysis = openaiResult.analysis;
+                //     console.log('OpenAI AI analysis successful');
+                // } 
+                */
             }
         } catch (error) {
             console.error('Gemini AI analysis failed:', error.message);
@@ -159,24 +180,37 @@ export async function POST(request) {
         // Collect addresses to check: Top 10 Holders + Snipers
         const walletsToCheck = new Set();
         if (holderData.top10Holders) {
-            holderData.top10Holders.forEach(h => walletsToCheck.add(h.address));
+            holderData.top10Holders.forEach(h => {
+                // Use OWNER address if available (for SOL balance check), fallback to address
+                const walletToCheck = h.owner || h.address;
+                walletsToCheck.add(walletToCheck);
+            });
         }
         if (sniperData && sniperData.sniperWallets) {
             sniperData.sniperWallets.forEach(s => walletsToCheck.add(s.address));
         }
 
         // Run Whale Analysis
+        // Run Whale Analysis with strict filtering
+        // We only want whales that are NOT known system addresses (Bonding Curve, etc.)
         const whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
+
+        // Filter whales for UI: Remove any that align with known system addresses from holder data
+        if (whaleAnalysis.whales && holderData.top10Holders) {
+            const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
+            whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
+            whaleAnalysis.count = whaleAnalysis.whales.length;
+        }
 
 
         // Record usage (Only if new analysis)
         if (!skipUsageRecord) {
-            recordUsage(user.id, ca);
+            await recordUsage(user.id, ca);
         }
 
         // Record scan for "Recent Scans" list
         try {
-            recordScan(user.id, {
+            await recordScan(user.id, {
                 address: ca,
                 name: tokenData.name,
                 symbol: tokenData.symbol,
@@ -283,7 +317,8 @@ export async function POST(request) {
                 total: holderData.totalHolders,
                 top10Percent: holderData.top10HoldersPercent,
                 distribution: holderData.holderDistribution,
-                topHolders: (holderData.top10Holders || []).slice(0, getTierInfo(user.tier).features.includes('top50_holders') ? 50 : 10)
+                topHolders: (holderData.top10Holders || []).slice(0, getTierInfo(user.tier).features.includes('top50_holders') ? 50 : 10),
+                isEstimated: holderData.isEstimated || false
             },
             bondingCurve: {
                 progress: bondingData.progress,
@@ -450,148 +485,79 @@ function calculateGraduationChance(bondingData, tokenData, holderData, velocity)
 }
 
 /**
- * Basic profitability calculation when AI is unavailable
- * IMPROVED: Stricter scoring with dev/sniper penalties
+ * Basic profitability calculation with Weighted Scoring Model
+ * Smoothed scoring to prevent volatility
  */
 function calculateBasicProfitability(tokenData, holderData, bondingData, organicScore, riskLevel, uniqueBuyers = 0, devWalletData = {}, sniperData = {}, isWinningProfile = false, whaleAnalysis = {}) {
-    let score = 20; // Start very pessimistic - memecoins are inherently risky
+    let score = 30; // Base Score (Neutral Start)
 
-    // === ADVANCED MOMENTUM (5m) ===
-    // Check if buying pressure is surging NOW
-    const total5m = (tokenData.buyCount5m || 0) + (tokenData.sellCount5m || 0);
-    if (total5m > 10) {
-        const buyPressure5m = (tokenData.buyCount5m / total5m);
-        if (buyPressure5m > 0.6) score += 10;
-        else if (buyPressure5m < 0.4) score -= 10;
-    }
-
-    // === WHALE CONVICTION ===
+    // --- 1. WHALE CONVICTION (Weighted) ---
+    // Instead of binary +15, we scale by count. Max 20 pts.
     const whaleCount = whaleAnalysis.count || 0;
-    if (whaleCount > 2) score += 15; // Strong conviction
-    else if (whaleCount > 0) score += 5; // Minimal conviction
+    const whaleScore = Math.min(20, whaleCount * 3); // 3 pts per whale, cap at 20
+    score += whaleScore;
 
-    // === LIQUIDITY HEALTH ===
-    // Prevents high scores for thin liquidity rugs
-    if (tokenData.marketCap > 0) {
-        const liqRatio = tokenData.liquidity / tokenData.marketCap;
-        if (liqRatio > 0.15) score += 5;
-        else if (liqRatio < 0.05) score -= 15; // Danger zone
+    // --- 2. MOMENTUM & PRESSURE (Smoothed) ---
+    // Scaled around 50% buy ratio. Range: -10 to +15
+    // 50% = 0 pts, 70% = +10 pts, 30% = -10 pts
+    const buyRatio = tokenData.buyRatio || 50;
+    const momentumScore = (buyRatio - 50) * 0.5;
+    score += Math.max(-15, Math.min(15, momentumScore));
+
+    // --- 3. LIQUIDITY DEPTH (Logarithmic) ---
+    // Log scale to reward real depth. 1k = 0, 10k = 5, 100k = 10
+    const liquidity = tokenData.liquidity || 0;
+    if (liquidity > 1000) {
+        const liqScore = Math.min(15, Math.log10(liquidity / 1000) * 5);
+        score += liqScore;
+    } else {
+        score -= 10; // Penalize dust liquidity
     }
 
-    // === SOCIAL VALIDATION ===
-    // Basic check for effort
-    const hasSocials = (tokenData.websites && tokenData.websites.length > 0) || (tokenData.socials && tokenData.socials.length > 0);
-    if (hasSocials) score += 5;
-    else score -= 5; // No socials = very suspicious
+    // --- 4. VOLUME DENSITY (Active Trading) ---
+    // Volume relative to Mcap (Turnover). Healthy = 0.5 - 2.0
+    // Too low = dead, Too high > 5.0 = suspect/bot wash
+    const volToMcap = (tokenData.volume24h || 0) / (tokenData.marketCap || 1);
+    if (volToMcap > 0.3 && volToMcap < 5.0) score += 5;
+    else if (volToMcap < 0.1) score -= 10; // Zombie
 
-    // === POSITIVE FACTORS (Legacy) ===
+    // --- 5. SOCIAL & ORGANIC (Binary) ---
+    if ((tokenData.websites?.length > 0) || (tokenData.socials?.length > 0)) score += 5;
+    if (organicScore > 0.6) score += 5;
 
-    // Volume/Liquidity Check
-    if (tokenData.liquidity > 20000) score += 10;
-    else if (tokenData.liquidity > 10000) score += 5;
-
-    if (tokenData.volume24h > 100000) score += 10;
-    else if (tokenData.volume24h > 50000) score += 5;
-
-    // 5m Volume Impact (Momentum) - Stronger rewards
-    if (tokenData.volume5m > 10000) score += 10;
-    else if (tokenData.volume5m > 5000) score += 5;
-
-    // Holder Check
+    // --- 6. HOLDER STRENGTH ---
+    // Reward broad distribution
     if (holderData.totalHolders > 500) score += 10;
     else if (holderData.totalHolders > 200) score += 5;
 
-    // Unique Buyers Check
-    if (uniqueBuyers > 100) score += 10;
-    else if (uniqueBuyers > 50) score += 5;
+    // Penalize Top 10 concentration
+    const top10 = holderData.top10HoldersPercent || 0;
+    if (top10 < 20) score += 10;
+    else if (top10 > 50) score -= 15; // Danger
+    else if (top10 > 30) score -= 5;
 
-    // Good holder distribution
-    if (holderData.top10HoldersPercent < 20) score += 10;
-    else if (holderData.top10HoldersPercent < 30) score += 5;
+    // --- 7. DEV & SNIPER BEHAVIOR (Critical Modifiers) ---
+    if (devWalletData.action === 'HOLDING') score += 10;
+    if (devWalletData.action === 'SOLD ALL') score -= 30; // Dumped
 
-    // Bonding Curve near graduation
-    if (bondingData.progress > 95) score += 15;
-    else if (bondingData.progress > 80) score += 10;
-    else if (bondingData.progress > 60) score += 5;
-
-    // Organic Score
-    if (organicScore > 0.7) score += 10;
-    else if (organicScore > 0.5) score += 5;
-
-    // Dev HOLDING is a positive sign
-    if (devWalletData.action === 'HOLDING') {
-        score += 10;
-    }
-
-    // Snipers still holding = confidence
+    // Snipers: Holding is good, dumping is bad
     const totalSnipers = sniperData.totalSnipers || 0;
-    const snipersSold = sniperData.snipersSold || 0;
     if (totalSnipers > 0) {
-        const snipersHoldingRatio = 1 - (snipersSold / totalSnipers);
-        if (snipersHoldingRatio > 0.8) score += 10;
-        else if (snipersHoldingRatio > 0.5) score += 5;
+        const soldRatio = (sniperData.snipersSold || 0) / totalSnipers;
+        if (soldRatio < 0.2) score += 5; // <20% sold
+        else if (soldRatio > 0.7) score -= 15; // >70% dumped
     }
 
-    // DEV WALLET STATUS - Critical red flag
-    if (devWalletData.action === 'SOLD ALL') {
-        score -= 30; // Major rug indicator
-    }
+    // --- 8. WINNING PROFILE BOOSTER ---
+    if (isWinningProfile) score += 10;
 
-    // SNIPER DUMP - If most snipers sold
-    if (totalSnipers > 0) {
-        const snipersSoldRatio = snipersSold / totalSnipers;
-        if (snipersSoldRatio > 0.8) score -= 20;      // 80%+ dumped
-        else if (snipersSoldRatio > 0.6) score -= 10; // 60%+ dumped
-    }
+    // --- 9. DEAD / RUG PENALTIES (Safety Overrides) ---
+    if ((tokenData.volume5m || 0) < 50 && (tokenData.ageHours > 4)) score -= 25; // Dead coin
+    if (riskLevel === 'CRITICAL') score = Math.min(score, 20); // Hard Cap
+    if (riskLevel === 'HIGH') score = Math.min(score, 60);
 
-    // 5m Volume Penalties - Tiered
-    if (tokenData.volume5m === 0) score -= 30;           // Dead
-    else if (tokenData.volume5m < 100) score -= 25;      // Nearly dead
-    else if (tokenData.volume5m < 500) score -= 15;      // Low momentum
-
-    // Age + Dead Combo Penalty
-    if ((tokenData.ageHours || 0) > 24 && (tokenData.volume5m || 0) < 100) {
-        score -= 20; // Abandoned token
-    }
-
-    // Unique Buyers Penalty
-    if (uniqueBuyers < 10 && (tokenData.ageHours || 0) > 0.5) score -= 15;
-
-    // Concentration Risk - Stricter tiers
-    if (holderData.top10HoldersPercent > 70) score -= 30;
-    else if (holderData.top10HoldersPercent > 50) score -= 20;
-    else if (holderData.top10HoldersPercent > 40) score -= 10;
-
-    // Top 1 Holder Dominance
-    const top1Percent = holderData.top10Holders?.[0]?.percent
-        ? parseFloat(holderData.top10Holders[0].percent)
-        : 0;
-    if (top1Percent > 30) score -= 25;
-    else if (top1Percent > 20) score -= 15;
-    else if (top1Percent > 15) score -= 5;
-
-    // Organic Score Penalty
-    if (organicScore < 0.2) score -= 25;
-    else if (organicScore < 0.3) score -= 15;
-
-    // Price Trend Penalty
-    if ((tokenData.priceChange5m || 0) < -10) score -= 15;
-    else if ((tokenData.priceChange5m || 0) < -5) score -= 10;
-
-    // === RISK LEVEL CAPS ===
-    if (riskLevel === 'CRITICAL') {
-        score -= 30;
-        return Math.min(25, Math.max(0, score)); // Max 25% if Critical
-    }
-    if (riskLevel === 'HIGH') {
-        score -= 15;
-        // ADJUSTED CAP: If it's a "Winning Profile", allow up to 80%
-        const cap = isWinningProfile ? 80 : 50;
-        return Math.min(cap, Math.max(0, score));
-    }
-
-    // Allow up to 100% but token must EARN it through exceptional metrics
-    return Math.max(0, Math.min(100, score));
+    // Final Clamp 0-99
+    return Math.max(1, Math.min(99, Math.round(score)));
 }
 
 /**

@@ -1,7 +1,6 @@
-
 import { NextResponse } from 'next/server';
 import { verifyPayment } from '@/lib/payment';
-import { initDatabase } from '@/lib/db';
+import { upgradeUser } from '@/lib/db';
 
 export async function POST(req) {
     try {
@@ -26,22 +25,9 @@ export async function POST(req) {
         }
 
         // 2. Upgrade User in DB
-        const db = initDatabase();
+        const success = await upgradeUser(walletAddress, 'PREMIUM');
 
-        // Find user by wallet address check
-        const user = db.prepare('SELECT * FROM users WHERE wallet_address = ?').get(walletAddress);
-
-        if (!user) {
-            return NextResponse.json(
-                { success: false, error: 'User account not found via wallet' },
-                { status: 404 }
-            );
-        }
-
-        // Update tier
-        const update = db.prepare('UPDATE users SET tier = ? WHERE id = ?').run('PREMIUM', user.id);
-
-        if (update.changes > 0) {
+        if (success) {
             return NextResponse.json({
                 success: true,
                 message: 'Account upgraded to Premium',

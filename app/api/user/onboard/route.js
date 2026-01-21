@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { initDatabase } from '@/lib/db';
+import { onboardUser } from '@/lib/db';
 
 export async function POST(request) {
     try {
@@ -9,10 +9,14 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        const db = initDatabase();
-
         // Update user to onboarded
-        db.prepare('UPDATE users SET is_onboarded = 1 WHERE wallet_address = ?').run(walletAddress);
+        const success = await onboardUser(walletAddress);
+
+        if (!success) {
+            console.error('Onboarding failed in DB');
+            // But maybe success: true anyway if it's just idempotent? 
+            // Logic says if user doesn't exist, we might fail.
+        }
 
         return NextResponse.json({ success: true });
 
