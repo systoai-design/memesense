@@ -16,9 +16,17 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('idle'); // idle, signing, verifying, success, error
     const [errorMessage, setErrorMessage] = useState(null);
+    const [plan, setPlan] = useState('lifetime'); // 'lifetime' | 'monthly'
+
+    const PRICES = {
+        monthly: 0.5,
+        lifetime: 5
+    };
 
     // Dynamic Price Logic
-    const finalPrice = DEV_WALLETS.includes(walletAddress) ? 0.0001 : PRICE_SOL;
+    // If dev wallet, price is 0.0001 REGARDLESS of plan (for testing both)
+    const isDev = DEV_WALLETS.includes(walletAddress);
+    const finalPrice = isDev ? 0.0001 : PRICES[plan];
 
     const handlePayment = async () => {
         if (!window.solana || !window.solana.isPhantom) {
@@ -93,7 +101,8 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     walletAddress,
-                    signature
+                    signature,
+                    plan
                 })
             });
 
@@ -155,6 +164,40 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                     </p>
                 </div>
 
+                {/* Plan Toggles */}
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', background: 'rgba(255,255,255,0.05)', padding: '5px', borderRadius: '100px' }}>
+                    <button
+                        onClick={() => setPlan('monthly')}
+                        children="Monthly (0.5 SOL)"
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '100px',
+                            border: 'none',
+                            background: plan === 'monthly' ? '#fbbf24' : 'transparent',
+                            color: plan === 'monthly' ? '#000' : '#888',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    />
+                    <button
+                        onClick={() => setPlan('lifetime')}
+                        children="Lifetime (5 SOL)"
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '100px',
+                            border: 'none',
+                            background: plan === 'lifetime' ? '#fbbf24' : 'transparent',
+                            color: plan === 'lifetime' ? '#000' : '#888',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    />
+                </div>
+
                 <div className="features-list" style={{ textAlign: 'left', marginBottom: '30px', background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
                         <span style={{ marginRight: '10px' }}>🐋</span>
@@ -201,7 +244,7 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                         {loading ? (
                             status === 'signing' ? 'Wait for Wallet...' : 'Verifying Payment...'
                         ) : (
-                            `Pay ${finalPrice} SOL Lifetime`
+                            `Pay ${finalPrice} SOL ${plan === 'lifetime' ? 'Lifetime' : 'Monthly'}`
                         )}
                     </button>
                 )}

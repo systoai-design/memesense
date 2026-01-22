@@ -106,6 +106,11 @@ export default function UpgradePage() {
 
             console.log(`[Payment] Connected via ${rpcUsed}`);
 
+            // Determine price
+            const isDev = ['HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11', 'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2'].includes(userPubKey.toString());
+            let finalPrice = billingCycle === 'monthly' ? 0.5 : 5.0;
+            if (isDev) finalPrice = 0.0001;
+
             const transaction = new Transaction({
                 feePayer: userPubKey,
                 recentBlockhash: latestBlock.blockhash,
@@ -113,7 +118,7 @@ export default function UpgradePage() {
                 SystemProgram.transfer({
                     fromPubkey: userPubKey,
                     toPubkey: new PublicKey(config.adminWallet),
-                    lamports: config.priceSol * LAMPORTS_PER_SOL,
+                    lamports: finalPrice * LAMPORTS_PER_SOL,
                 })
             );
 
@@ -124,16 +129,36 @@ export default function UpgradePage() {
             setStatus('Verifying payment (do not close)...');
             console.log('Tx sent:', signature);
 
-            await connection.confirmTransaction(signature, 'confirmed');
+            // 4. Poll for Confirmation (Robust Method)
+            let confirmed = false;
+            let retries = 0;
+            const maxRetries = 30; // 60 seconds
 
-            // 4. Verify on Backend
+            while (!confirmed && retries < maxRetries) {
+                retries++;
+                const { value } = await connection.getSignatureStatus(signature);
+
+                if (value && (value.confirmationStatus === 'confirmed' || value.confirmationStatus === 'finalized')) {
+                    confirmed = true;
+                    console.log('Transaction confirmed:', value.confirmationStatus);
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            if (!confirmed) {
+                console.warn('Local confirmation timed out, checking with backend anyway...');
+            }
+
+            // 5. Verify on Backend
             const verifyRes = await fetch('/api/payment/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     signature,
                     walletAddress: userPubKey.toString(),
-                    deviceId: localStorage.getItem('memesense_device_id')
+                    deviceId: localStorage.getItem('memesense_device_id'),
+                    plan: billingCycle
                 })
             });
 
@@ -273,7 +298,7 @@ export default function UpgradePage() {
                         <div className={styles.planHeader}>
                             <h3>Pro Access</h3>
                             <div className={styles.price}>
-                                {billingCycle === 'monthly' ? `${config?.priceSol || 5} SOL` : '5 SOL'}
+                                {billingCycle === 'monthly' ? '0.5 SOL' : '5 SOL'}
                                 <span className={styles.period}>/{billingCycle === 'monthly' ? 'mo' : 'once'}</span>
                             </div>
                         </div>

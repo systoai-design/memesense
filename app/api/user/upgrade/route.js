@@ -5,7 +5,7 @@ import { upgradeUser } from '@/lib/db';
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { walletAddress, signature } = body;
+        const { walletAddress, signature, plan = 'lifetime' } = body; // Default to lifetime if not provided
 
         if (!walletAddress || !signature) {
             return NextResponse.json(
@@ -15,7 +15,7 @@ export async function POST(req) {
         }
 
         // 1. Verify Payment on-chain
-        const verification = await verifyPayment(signature, walletAddress);
+        const verification = await verifyPayment(signature, walletAddress, plan);
 
         if (!verification.success) {
             return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(req) {
         }
 
         // 2. Upgrade User in DB
-        const success = await upgradeUser(walletAddress, 'PREMIUM');
+        const success = await upgradeUser(walletAddress, plan);
 
         if (success) {
             return NextResponse.json({
