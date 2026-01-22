@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import styles from '@/app/app/page.module.css'; // Reuse existing styles or inline
 
@@ -14,7 +14,7 @@ const DEV_WALLETS = [
 
 export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState('idle'); // idle, signing, verifying, success, error
+    const [status, setStatus] = useState('idle'); // idle, signing, verifying, success, error, active
     const [errorMessage, setErrorMessage] = useState(null);
     const [plan, setPlan] = useState('lifetime'); // 'lifetime' | 'monthly'
 
@@ -22,6 +22,30 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
         monthly: 0.5,
         lifetime: 5
     };
+
+    // Check status on mount
+    useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const res = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress })
+                });
+                const data = await res.json();
+                if (data.success && data.user.tier === 'PREMIUM') {
+                    // Check if subscription has expired? (Backend should have downgraded them if expired, 
+                    // provided canUseAnalysis or login checks happen. Login endpoint usually just returns row.
+                    // We might need to check if we need to show "Renew" for monthly.)
+                    // For now, if tier is PREMIUM, we show Active.
+                    setStatus('active');
+                }
+            } catch (e) {
+                console.error("Failed to check status", e);
+            }
+        };
+        if (walletAddress) checkStatus();
+    }, [walletAddress]);
 
     // Dynamic Price Logic
     // If dev wallet, price is 0.0001 REGARDLESS of plan (for testing both)
@@ -223,7 +247,29 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                     </div>
                 )}
 
-                {status === 'success' ? (
+                {status === 'active' ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '10px' }}>👑</div>
+                        <h3 style={{ color: '#fbbf24', fontSize: '1.5rem', marginBottom: '10px' }}>Premium Active</h3>
+                        <p style={{ color: '#ccc', marginBottom: '20px' }}>
+                            You already have a Premium subscription active on this wallet.
+                        </p>
+                        <button
+                            onClick={onClose}
+                            className="btn"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: '#fff',
+                                padding: '10px 20px',
+                                width: '100%',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Close
+                        </button>
+                    </div>
+                ) : status === 'success' ? (
                     <div style={{ color: '#22c55e', fontSize: '1.2rem', fontWeight: 'bold' }}>
                         🎉 Upgrade Successful! Refreshing...
                     </div>
