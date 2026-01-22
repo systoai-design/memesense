@@ -25,9 +25,11 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
 
         try {
             // 1. Establish Connection
-            // Use local proxy to avoid 403 errors and hide API keys
-            // The browser will resolve '/api/rpc' to the current domain
-            const connection = new Connection('/api/rpc', 'confirmed');
+            // Use local proxy with absolute URL
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const proxyUrl = `${protocol}//${host}/api/rpc`;
+            const connection = new Connection(proxyUrl, 'confirmed');
             const fromPubkey = new PublicKey(walletAddress);
             const toPubkey = new PublicKey(ADMIN_WALLET);
 
