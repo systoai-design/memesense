@@ -10,14 +10,15 @@ export default function UpgradePage() {
     const router = useRouter();
     const [billingCycle, setBillingCycle] = useState('monthly');
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useState('idle');
     const [error, setError] = useState('');
+    const [userTier, setUserTier] = useState('FREE'); // Track tier
 
     // Config
     const [config, setConfig] = useState(null);
 
+    // Initial Config Load
     useEffect(() => {
-        // Fetch public config
         fetch('/api/config/payment')
             .then(res => res.json())
             .then(data => setConfig(data))
@@ -31,8 +32,41 @@ export default function UpgradePage() {
                 return provider;
             }
         }
-        return null; // window.solana is often Phantom too, but let's stick to safe check
+        return null;
     };
+
+    // Check User Status (Already Premium?)
+    useEffect(() => {
+        const checkStatus = async () => {
+            const provider = getProvider();
+            if (provider && provider.isConnected) {
+                try {
+                    const pubKey = provider.publicKey.toString();
+                    const res = await fetch('/api/user/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ walletAddress: pubKey })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        setUserTier(data.user.tier);
+                        if (data.user.tier === 'PREMIUM') {
+                            setStatus('active');
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to check status", e);
+                }
+            }
+        };
+
+        // Check initially and on interval if wallet connects
+        checkStatus();
+
+        // Also listen for phantom connect events if possible, but interval is easier for this standalone page
+        const interval = setInterval(checkStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handlePayment = async () => {
         setLoading(true);
@@ -41,7 +75,7 @@ export default function UpgradePage() {
 
         try {
             if (!config || !config.adminWallet) {
-                throw new Error('System configuration missing. Please try again later.');
+                throw new Error('System configuration missing. Please refresh.');
             }
 
             const provider = getProvider();
@@ -52,59 +86,29 @@ export default function UpgradePage() {
 
             // 1. Connect
             setStatus('Please approve connection...');
-            const resp = await provider.connect();
-            const userPubKey = resp.publicKey;
-            if (!userPubKey) throw new Error('Wallet connection failed');
-
-            // 2. Create Transaction
-            // 2. Create Transaction
-            setStatus('Initializing connection...');
-
-            // Define RPC options: [Configured/Private, Public Fallback]
-            const primaryRpc = process.env.NEXT_PUBLIC_RPC_URL || config?.rpcUrl;
-            const fallbackRpc = 'https://api.mainnet-beta.solana.com';
-
-            let connection;
-            let latestBlock;
-            let rpcUsed;
-
-            // Helper to try connection
-            const connectAndGetBlock = async (url) => {
-                console.log('[Payment] Trying RPC:', url);
-                const conn = new Connection(url, 'confirmed');
-                const block = await conn.getLatestBlockhash();
-                return { conn, block };
-            };
-
+            let userPubKey;
             try {
-                // Attempt 1: Primary RPC
-                if (primaryRpc) {
-                    try {
-                        setStatus('Connecting to primary RPC...');
-                        const result = await connectAndGetBlock(primaryRpc);
-                        connection = result.conn;
-                        latestBlock = result.block;
-                        rpcUsed = 'Primary';
-                    } catch (primaryErr) {
-                        console.warn('[Payment] Primary RPC failed, switching to fallback...', primaryErr);
-                        // Fall through to fallback
-                    }
-                }
-
-                // Attempt 2: Fallback (if primary failed or wasn't set)
-                if (!connection) {
-                    setStatus('Connecting to public RPC...');
-                    const result = await connectAndGetBlock(fallbackRpc);
-                    connection = result.conn;
-                    latestBlock = result.block;
-                    rpcUsed = 'Ankr (Public)';
-                }
-
-            } catch (finalErr) {
-                throw new Error(`Connection failed: ${finalErr.message}. Tried: ${rpcUsed || 'All'}`);
+                const resp = await provider.connect();
+                userPubKey = resp.publicKey;
+            } catch (connErr) {
+                throw new Error('Wallet connection denied.');
             }
 
-            console.log(`[Payment] Connected via ${rpcUsed}`);
+            if (!userPubKey) throw new Error('Wallet connection failed');
+
+            // 2. Create Transaction using Proxy RPC
+            setStatus('Initializing connection...');
+
+            // Use local proxy with absolute URL to avoid CORS/403 on client
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const proxyUrl = `${protocol}//${host}/api/rpc`;
+
+            console.log('[Payment] Using Proxy RPC:', proxyUrl);
+            const connection = new Connection(proxyUrl, 'confirmed');
+
+            // Get Blockhash
+            const { blockhash } = await connection.getLatestBlockhash();
 
             // Determine price
             const isDev = ['HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11', 'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2'].includes(userPubKey.toString());
@@ -113,7 +117,7 @@ export default function UpgradePage() {
 
             const transaction = new Transaction({
                 feePayer: userPubKey,
-                recentBlockhash: latestBlock.blockhash,
+                recentBlockhash: blockhash,
             }).add(
                 SystemProgram.transfer({
                     fromPubkey: userPubKey,
@@ -310,13 +314,27 @@ export default function UpgradePage() {
                             <li><Check size={16} color="#ccff00" /> Dev Wallet tracking</li>
                             <li><Check size={16} color="#ccff00" /> Priority Support</li>
                         </ul>
-                        <button
-                            className={styles.upgradeBtn}
-                            onClick={handlePayment}
-                            disabled={loading}
-                        >
-                            {loading ? 'Processing...' : 'Upgrade with SOL 🚀'}
-                        </button>
+                        {userTier === 'PREMIUM' || status === 'active' ? (
+                            <button
+                                className={styles.upgradeBtn}
+                                onClick={() => router.push('/app')}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid #ccff00',
+                                    color: '#ccff00'
+                                }}
+                            >
+                                ✨ Premium Active - Go to App
+                            </button>
+                        ) : (
+                            <button
+                                className={styles.upgradeBtn}
+                                onClick={handlePayment}
+                                disabled={loading}
+                            >
+                                {loading ? 'Processing...' : 'Upgrade with SOL 🚀'}
+                            </button>
+                        )}
 
                         {/* TRIAL BUTTON MOVED HERE */}
                         <button
