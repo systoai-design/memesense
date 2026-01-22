@@ -60,14 +60,34 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
 
             setStatus('verifying');
 
-            // 4. Send to Backend for Verification
-            // We wait a few seconds for propagation if purely relying on backend
-            // But let's call immediately, backend will poll/wait or we utilize 'confirmed' status locally first?
-            // Backend `verifyPayment` uses `getParsedTransaction`, so it needs to be confirmed.
-            // We should wait for confirmation locally for better UX before calling backend.
+            // 4. Poll for Confirmation (Robust Method)
+            let confirmed = false;
+            let retries = 0;
+            const maxRetries = 30; // 60 seconds total
 
-            await connection.confirmTransaction(signature, 'confirmed');
+            setStatus('verifying'); // Status is already 'signing' before, now 'verifying' 
+            // Add note: 'Verifying... may take up to 1 min' handled by UI via status or generic text
 
+            while (!confirmed && retries < maxRetries) {
+                retries++;
+                const { value } = await connection.getSignatureStatus(signature);
+
+                if (value && (value.confirmationStatus === 'confirmed' || value.confirmationStatus === 'finalized')) {
+                    confirmed = true;
+                    console.log('Transaction confirmed:', value.confirmationStatus);
+                    break;
+                }
+
+                // Wait 2 seconds
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            if (!confirmed) {
+                // If timed out locally, we STILL verify with backend, as backend might be able to see it
+                console.warn('Local confirmation timed out, checking with backend anyway...');
+            }
+
+            // 5. Send to Backend for Verification
             const res = await fetch('/api/user/upgrade', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
