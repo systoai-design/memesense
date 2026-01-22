@@ -26,6 +26,7 @@ import styles from './page.module.css';
 import ProfitabilityGauge from '@/components/ProfitabilityGauge';
 import MetricsCard from '@/components/MetricsCard';
 import PremiumModal from '@/components/PremiumModal';
+import BetaBadge from '@/components/BetaBadge';
 
 export default function AnalyzePage() {
     const { ca } = useParams();
@@ -205,8 +206,9 @@ export default function AnalyzePage() {
                         <ChevronLeft size={20} />
                         Back
                     </a>
-                    <a href="/app">
+                    <a href="/app" style={{ display: 'flex', alignItems: 'center' }}>
                         <img src="/logo.png" alt="MemeSense" style={{ height: '50px', marginLeft: '20px', width: 'auto' }} />
+                        <BetaBadge />
                     </a>
                 </div>
                 <div className={styles.liveIndicator}>

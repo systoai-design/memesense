@@ -19,6 +19,7 @@ import {
     X
 } from 'lucide-react';
 import styles from './page.module.css';
+import BetaBadge from '@/components/BetaBadge';
 
 // ===== SCROLL REVEAL HOOK =====
 const useScrollReveal = (threshold = 0.1) => {
@@ -450,8 +451,9 @@ export default function Home() {
         <div className={styles.page}>
             {/* ===== HEADER ===== */}
             <header className={styles.header}>
-                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ display: 'flex', alignItems: 'center' }}>
                     <img src="/logo.png" alt="MemeSense" className={styles.logo} style={{ height: '60px', width: 'auto' }} />
+                    <BetaBadge />
                 </a>
                 <nav className={styles.nav}>
                     <a href="#features" className={styles.navLink}>Features</a>

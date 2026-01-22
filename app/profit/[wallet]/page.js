@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import LoadingScan from '../../../components/LoadingScan';
 import styles from './page.module.css';
+import BetaBadge from '@/components/BetaBadge';
 
 export default function ProfitPage() {
     const { wallet: walletParam } = useParams();
@@ -166,8 +167,9 @@ export default function ProfitPage() {
                     <button onClick={() => router.push('/app')} className={styles.backIconButton} title="Back to Search">
                         <ChevronLeft size={20} />
                     </button>
-                    <div className={styles.brand} onClick={() => router.push('/app')}>
+                    <div className={styles.brand} onClick={() => router.push('/app')} style={{ display: 'flex', alignItems: 'center' }}>
                         <img src="/logo.png" alt="MemeSense" className={styles.logo} />
+                        <BetaBadge />
                     </div>
                 </div>
 

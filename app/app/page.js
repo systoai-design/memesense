@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import PremiumModal from '@/components/PremiumModal';
+import BetaBadge from '@/components/BetaBadge';
 
 // Components
 // import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
@@ -202,8 +203,9 @@ export default function AppHome() {
             {/* Header */}
             <header className={styles.header}>
                 <div className={styles.navGroup}>
-                    <a href="/app">
+                    <a href="/app" style={{ display: 'flex', alignItems: 'center' }}>
                         <img src="/logo.png" alt="MemeSense" className={styles.logoImage} style={{ height: '60px', width: 'auto' }} />
+                        <BetaBadge />
                     </a>
                 </div>
                 <div className={styles.navGroup}>

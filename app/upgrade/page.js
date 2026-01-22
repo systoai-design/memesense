@@ -6,6 +6,8 @@ import styles from './page.module.css';
 import { useRouter } from 'next/navigation';
 import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
+import BetaBadge from '@/components/BetaBadge';
+
 export default function UpgradePage() {
     const router = useRouter();
     const [billingCycle, setBillingCycle] = useState('monthly');
@@ -220,6 +222,7 @@ export default function UpgradePage() {
             <header className={styles.header}>
                 <div onClick={() => router.push('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <img src="/logo.png" alt="MemeSense" style={{ height: 40 }} />
+                    <BetaBadge />
                 </div>
             </header>
 
