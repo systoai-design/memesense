@@ -18,6 +18,9 @@ export default function AppHome() {
     const [showConnectModal, setShowConnectModal] = useState(true);
     const [recentScans, setRecentScans] = useState([]);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false); // Guard against double clicks
+
+    const [userTier, setUserTier] = useState('FREE');
 
     const handleLogin = useCallback(async (address) => {
         setWalletAddress(address);
@@ -39,6 +42,7 @@ export default function AppHome() {
                 } else {
                     // User is authenticated and onboarded
                     setIsLoadingAuth(false);
+                    setUserTier(data.user.tier); // Update tier state
                 }
             }
         } catch (err) {
@@ -97,12 +101,33 @@ export default function AppHome() {
     }, [handleLogin]);
 
     const handleConnect = async () => {
+        if (isConnecting) return;
+
         if (window.solana && window.solana.isPhantom) {
+            setIsConnecting(true);
             try {
+                // Force a small delay to clear any pending extension states
+                await new Promise(r => setTimeout(r, 100));
+
                 const resp = await window.solana.connect();
                 handleLogin(resp.publicKey.toString());
             } catch (err) {
-                console.error("User rejected connection", err);
+                console.error("Connection failed", err);
+
+                // "User rejected" is common, don't alert for that
+                if (err.message?.includes('User rejected')) return;
+
+                // Try to get a meaningful error message
+                let msg = err.message || 'Unknown error';
+                if (err.code) msg += ` (Code: ${err.code})`;
+
+                if (msg === 'Unexpected error') {
+                    msg += ' - Try refreshing the page or unlocking your wallet.';
+                }
+
+                alert(`Wallet Error: ${msg}`);
+            } finally {
+                setIsConnecting(false);
             }
         } else {
             window.open('https://phantom.app/', '_blank');
@@ -182,9 +207,26 @@ export default function AppHome() {
                     </a>
                 </div>
                 <div className={styles.navGroup}>
-                    <div className={styles.badge} onClick={() => setShowPremiumModal(true)} style={{ cursor: 'pointer' }}>
-                        🎁 Premium Trial (Upgrade)
-                    </div>
+                    {/* User Tier Status Badge */}
+                    {walletAddress && (
+                        <div
+                            className={styles.badge}
+                            onClick={() => setShowPremiumModal(true)}
+                            style={{
+                                cursor: 'pointer',
+                                background: userTier === 'PREMIUM' ? 'rgba(255, 215, 0, 0.2)' :
+                                    userTier === 'TRIAL' ? 'rgba(204, 255, 0, 0.2)' :
+                                        'rgba(255, 255, 255, 0.1)',
+                                color: userTier === 'PREMIUM' ? '#ffd700' :
+                                    userTier === 'TRIAL' ? '#ccff00' :
+                                        '#fff'
+                            }}
+                        >
+                            {userTier === 'PREMIUM' ? '👑 Premium Active' :
+                                userTier === 'TRIAL' ? '⏳ Trial Active (Upgrade)' :
+                                    '🎁 Premium Trial (Upgrade)'}
+                        </div>
+                    )}
                     {walletAddress ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button
@@ -342,14 +384,17 @@ export default function AppHome() {
                     ))}
                 </div>
 
-                {showPremiumModal && (
-                    <PremiumModal
-                        walletAddress={walletAddress}
-                        onClose={() => setShowPremiumModal(false)}
-                        onSuccess={() => window.location.reload()}
-                    />
-                )}
+
             </main>
+
+            {/* Premium Modal - Moved outside main to avoid z-index/stacking context issues */}
+            {showPremiumModal && (
+                <PremiumModal
+                    walletAddress={walletAddress}
+                    onClose={() => setShowPremiumModal(false)}
+                    onSuccess={() => window.location.reload()}
+                />
+            )}
         </div>
     );
 }

@@ -424,7 +424,7 @@ export async function POST(request) {
             chart: ohlcvData,
             user: {
                 tier: user.tier,
-                remainingToday: usageCheck.remainingToday - 1,
+                remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
                 remainingTrial: user.tier === 'free' ? (trialStatus?.remaining || 0) : 'unlimited',
                 credits: user.credits
             },

@@ -6,12 +6,19 @@ import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } f
 import styles from '@/app/app/page.module.css'; // Reuse existing styles or inline
 
 const ADMIN_WALLET = '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ'; // Hardcoded fallback or passed as prop
-const PRICE_SOL = 0.5;
+const PRICE_SOL = 5;
+const DEV_WALLETS = [
+    'HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11',
+    'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2'
+];
 
 export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('idle'); // idle, signing, verifying, success, error
     const [errorMessage, setErrorMessage] = useState(null);
+
+    // Dynamic Price Logic
+    const finalPrice = DEV_WALLETS.includes(walletAddress) ? 0.0001 : PRICE_SOL;
 
     const handlePayment = async () => {
         if (!window.solana || !window.solana.isPhantom) {
@@ -38,7 +45,7 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 SystemProgram.transfer({
                     fromPubkey,
                     toPubkey,
-                    lamports: PRICE_SOL * LAMPORTS_PER_SOL,
+                    lamports: finalPrice * LAMPORTS_PER_SOL,
                 })
             );
 
@@ -92,8 +99,18 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     };
 
     return (
-        <div className={styles.authModalOverlay}>
-            <div className={`${styles.authModalCard} glass-card`} style={{ maxWidth: '500px', width: '90%' }}>
+        <div className={styles.authModalOverlay} style={{ padding: '20px', alignItems: 'center' }}>
+            <div
+                className={`${styles.authModalCard} glass-card`}
+                style={{
+                    maxWidth: '500px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    position: 'relative',
+                    margin: 'auto'
+                }}
+            >
                 <button
                     onClick={onClose}
                     style={{
@@ -164,7 +181,7 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                         {loading ? (
                             status === 'signing' ? 'Wait for Wallet...' : 'Verifying Payment...'
                         ) : (
-                            `Pay ${PRICE_SOL} SOL Lifetime`
+                            `Pay ${finalPrice} SOL Lifetime`
                         )}
                     </button>
                 )}
@@ -172,6 +189,56 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 <p style={{ marginTop: '15px', fontSize: '0.8rem', color: '#666' }}>
                     One-time payment. Lifetime access.
                 </p>
+
+                {/* Trial Activation Option */}
+                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ fontSize: '0.9rem', marginBottom: '12px', color: '#ccff00' }}>Not ready to commit?</p>
+                    <button
+                        onClick={async () => {
+                            if (loading) return;
+                            setLoading(true);
+                            setErrorMessage(null);
+                            try {
+                                const deviceId = localStorage.getItem('memesense_device_id');
+                                const res = await fetch('/api/user/trial', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ walletAddress, deviceId })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    setStatus('success');
+                                    setTimeout(() => {
+                                        onSuccess();
+                                        onClose();
+                                    }, 1500);
+                                } else {
+                                    throw new Error(data.error || 'Trial activation failed');
+                                }
+                            } catch (e) {
+                                setErrorMessage(e.message);
+                                setStatus('error');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="btn"
+                        disabled={loading}
+                        style={{
+                            background: 'rgba(204, 255, 0, 0.1)',
+                            border: '1px solid #ccff00',
+                            color: '#ccff00',
+                            padding: '10px 20px',
+                            width: '100%',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Start 3-Day Free Trial
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '8px' }}>
+                        No credit card required. One-time use only.
+                    </p>
+                </div>
             </div>
         </div>
     );

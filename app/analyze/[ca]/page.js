@@ -19,7 +19,8 @@ import {
     X,
     ChevronLeft,
     Copy,
-    ExternalLink
+    ExternalLink,
+    Lock
 } from 'lucide-react';
 import styles from './page.module.css';
 import ProfitabilityGauge from '@/components/ProfitabilityGauge';
@@ -267,12 +268,17 @@ export default function AnalyzePage() {
                         </div>
                     )}
                     <div className={styles.userBadge}>
-                        <span className={`badge ${user.tier === 'PREMIUM' ? 'badge-premium' : 'badge-info'}`}>
-                            {user.tier}
+                        <span className={`badge ${user.tier === 'PREMIUM' || user.tier === 'TRIAL' ? 'badge-premium' : 'badge-info'}`}>
+                            {user.tier === 'TRIAL' ? 'PREMIUM TRIAL' : user.tier}
                         </span>
                         {user.tier === 'FREE' && (
                             <span className={styles.trialRemaining}>
                                 ⚡ {user.remainingToday}/10 FREE SCAN(S)
+                            </span>
+                        )}
+                        {user.tier === 'TRIAL' && (
+                            <span className={styles.trialRemaining} style={{ color: '#ccff00' }}>
+                                ⏳ 3-Day Trial Active
                             </span>
                         )}
                     </div>
@@ -507,16 +513,60 @@ export default function AnalyzePage() {
                 {/* Right Column - Risk & Safety (40%) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: '1' }}>
 
-                    {/* 1. Whale & Dev Analysis */}
-                    <section className={`card ${styles.profitCard}`} style={{ padding: '24px', textAlign: 'left' }}>
+                    {/* 1. Whale & Dev Analysis (GATED) */}
+                    <section className={`card ${styles.profitCard}`} style={{ padding: '24px', textAlign: 'left', position: 'relative', overflow: 'hidden' }}>
+
+                        {/* Premium Gate Overlay */}
+                        {user.tier === 'FREE' && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(8px)',
+                                zIndex: 10,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                border: '1px solid rgba(204, 255, 0, 0.2)'
+                            }}>
+                                <Lock size={32} color="#ccff00" />
+                                <div style={{ textAlign: 'center' }}>
+                                    <h3 style={{ margin: 0, color: '#fff' }}>Premium Feature</h3>
+                                    <p style={{ margin: '4px 0 16px', color: '#888', fontSize: '0.9rem' }}>
+                                        Unlock Whale, Dev & Sniper analysis
+                                    </p>
+                                    <button
+                                        onClick={() => setShowPremiumModal(true)}
+                                        className="btn btn-primary"
+                                        style={{ padding: '8px 24px' }}
+                                    >
+                                        Upgrade to Unlock
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ fontSize: '1.2rem' }}><Bot size={24} color="var(--primary)" /></span>
                                 <h2 style={{ textAlign: 'left', margin: 0, fontSize: '1.1rem' }}>Whale & Dev Analysis</h2>
                             </div>
-                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px', color: '#fff', opacity: 0.7 }}>PREMIUM UNLOCKED</span>
+                            {user.tier === 'PREMIUM' ? (
+                                <span style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px', color: '#ccff00', opacity: 0.9 }}>
+                                    PREMIUM UNLOCKED
+                                </span>
+                            ) : (
+                                <span style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px', color: '#888', opacity: 0.7 }}>
+                                    PREMIUM ONLY
+                                </span>
+                            )}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', filter: user.tier === 'FREE' ? 'blur(4px)' : 'none' }}>
                             {/* Whale Wallets */}
                             <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: data.mechanics?.whales?.hasWhales ? '8px' : '0' }}>
@@ -635,7 +685,14 @@ export default function AnalyzePage() {
 
                     {/* 3. Holder Distribution */}
                     <section className={`card ${styles.profitCard}`} style={{ padding: '24px', textAlign: 'left' }}>
-                        <h2 style={{ textAlign: 'left' }}>Holders Distribution</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ textAlign: 'left', margin: 0 }}>Holders Distribution</h2>
+                            {user.tier === 'FREE' && (
+                                <span style={{ fontSize: '0.75rem', padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', color: '#ccc' }}>
+                                    Top 5 Only (Free)
+                                </span>
+                            )}
+                        </div>
 
                         <div className={styles.holderDist}>
                             <h3>Top 10 Concentration</h3>
@@ -662,7 +719,7 @@ export default function AnalyzePage() {
                         </div>
 
                         <ul className={styles.holdersList}>
-                            {(holders.topHolders || []).slice(0, 10).map((holder, i) => (
+                            {(holders.topHolders || []).slice(0, user.tier === 'PREMIUM' ? 50 : 5).map((holder, i) => (
                                 <li key={i} className={styles.holderItem}>
                                     <span className={styles.holderRank}>#{i + 1}</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -682,6 +739,16 @@ export default function AnalyzePage() {
                                 </li>
                             ))}
                         </ul>
+                        {user.tier === 'FREE' && (
+                            <div style={{ textAlign: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                <button
+                                    onClick={() => setShowPremiumModal(true)}
+                                    style={{ background: 'transparent', border: 'none', color: '#ccff00', cursor: 'pointer', fontSize: '0.85rem' }}
+                                >
+                                    View Top 50 Holders &rarr;
+                                </button>
+                            </div>
+                        )}
                     </section>
 
                     {/* Rug Check */}

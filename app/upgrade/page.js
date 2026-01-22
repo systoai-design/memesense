@@ -58,16 +58,53 @@ export default function UpgradePage() {
 
             // 2. Create Transaction
             // 2. Create Transaction
-            // STRICT PRIORITY: 1. Client-side Env | 2. API Config | 3. Permissive Public RPC (Ankr)
-            const rpc = process.env.NEXT_PUBLIC_RPC_URL || config?.rpcUrl || 'https://rpc.ankr.com/solana';
+            setStatus('Initializing connection...');
 
-            setStatus(`Initializing tx...`);
-            console.log('[Upgrade] Using RPC:', rpc);
+            // Define RPC options: [Configured/Private, Public Fallback]
+            const primaryRpc = process.env.NEXT_PUBLIC_RPC_URL || config?.rpcUrl;
+            const fallbackRpc = 'https://api.mainnet-beta.solana.com';
 
-            const connection = new Connection(rpc, 'confirmed');
+            let connection;
+            let latestBlock;
+            let rpcUsed;
 
-            // This is the line that usually fails with 403 on bad RPCs
-            const latestBlock = await connection.getLatestBlockhash();
+            // Helper to try connection
+            const connectAndGetBlock = async (url) => {
+                console.log('[Payment] Trying RPC:', url);
+                const conn = new Connection(url, 'confirmed');
+                const block = await conn.getLatestBlockhash();
+                return { conn, block };
+            };
+
+            try {
+                // Attempt 1: Primary RPC
+                if (primaryRpc) {
+                    try {
+                        setStatus('Connecting to primary RPC...');
+                        const result = await connectAndGetBlock(primaryRpc);
+                        connection = result.conn;
+                        latestBlock = result.block;
+                        rpcUsed = 'Primary';
+                    } catch (primaryErr) {
+                        console.warn('[Payment] Primary RPC failed, switching to fallback...', primaryErr);
+                        // Fall through to fallback
+                    }
+                }
+
+                // Attempt 2: Fallback (if primary failed or wasn't set)
+                if (!connection) {
+                    setStatus('Connecting to public RPC...');
+                    const result = await connectAndGetBlock(fallbackRpc);
+                    connection = result.conn;
+                    latestBlock = result.block;
+                    rpcUsed = 'Ankr (Public)';
+                }
+
+            } catch (finalErr) {
+                throw new Error(`Connection failed: ${finalErr.message}. Tried: ${rpcUsed || 'All'}`);
+            }
+
+            console.log(`[Payment] Connected via ${rpcUsed}`);
 
             const transaction = new Transaction({
                 feePayer: userPubKey,
@@ -113,8 +150,7 @@ export default function UpgradePage() {
 
         } catch (err) {
             console.error('[Payment Error]', err);
-            const rpcUsed = process.env.NEXT_PUBLIC_RPC_URL ? 'Helius/Private' : 'Public';
-            setError(`Payment Failed: ${err.message}. RPC: ${rpcUsed}`);
+            setError(`${err.message}`);
             setLoading(false);
         }
     };
@@ -237,7 +273,7 @@ export default function UpgradePage() {
                         <div className={styles.planHeader}>
                             <h3>Pro Access</h3>
                             <div className={styles.price}>
-                                {billingCycle === 'monthly' ? `${config?.priceSol || 0.5} SOL` : '12 SOL'}
+                                {billingCycle === 'monthly' ? `${config?.priceSol || 5} SOL` : '5 SOL'}
                                 <span className={styles.period}>/{billingCycle === 'monthly' ? 'mo' : 'once'}</span>
                             </div>
                         </div>
