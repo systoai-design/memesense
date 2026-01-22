@@ -57,8 +57,16 @@ export default function UpgradePage() {
             if (!userPubKey) throw new Error('Wallet connection failed');
 
             // 2. Create Transaction
-            setStatus('Creating transaction...');
-            const connection = new Connection('https://api.mainnet-beta.solana.com'); // Or use your RPC env if exposed
+            // 2. Create Transaction
+            // STRICT PRIORITY: 1. Client-side Env | 2. API Config | 3. Permissive Public RPC (Ankr)
+            const rpc = process.env.NEXT_PUBLIC_RPC_URL || config?.rpcUrl || 'https://rpc.ankr.com/solana';
+
+            setStatus(`Initializing tx...`);
+            console.log('[Upgrade] Using RPC:', rpc);
+
+            const connection = new Connection(rpc, 'confirmed');
+
+            // This is the line that usually fails with 403 on bad RPCs
             const latestBlock = await connection.getLatestBlockhash();
 
             const transaction = new Transaction({
@@ -104,8 +112,9 @@ export default function UpgradePage() {
             }, 1000);
 
         } catch (err) {
-            console.error(err);
-            setError(err.message || 'Payment failed');
+            console.error('[Payment Error]', err);
+            const rpcUsed = process.env.NEXT_PUBLIC_RPC_URL ? 'Helius/Private' : 'Public';
+            setError(`Payment Failed: ${err.message}. RPC: ${rpcUsed}`);
             setLoading(false);
         }
     };
@@ -199,27 +208,27 @@ export default function UpgradePage() {
                             </div>
                         </div>
                         <ul className={styles.featureList}>
-                            <li><Check size={16} /> 5 Token Scans / Day</li>
+                            <li><Check size={16} /> 10 Token Scans / Day</li>
                             <li><Check size={16} /> Basic Risk Level</li>
                             <li><Check size={16} /> Top 5 Holders</li>
                             <li className={styles.disabled}><Lock size={14} /> Whale Tracking</li>
                             <li className={styles.disabled}><Lock size={14} /> Profit Tracker</li>
                         </ul>
 
-                        {/* TRIAL BUTTON */}
-                        <div style={{ marginTop: 'auto', paddingTop: 20 }}>
-                            <div style={{ fontSize: 13, color: '#888', marginBottom: 10, textAlign: 'center' }}>
-                                Want to test drive?
-                            </div>
-                            <button
-                                className={styles.upgradeBtn}
-                                onClick={handleTrial}
-                                disabled={loading}
-                                style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}
-                            >
-                                <PlayCircle size={16} style={{ marginRight: 6 }} /> Start 3-Day Free Trial
-                            </button>
-                        </div>
+                        {/* Trial button moved to Pro card */}
+                        <button
+                            className={styles.currentBtn}
+                            onClick={() => router.push('/app')}
+                            style={{
+                                marginTop: 'auto',
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                color: '#fff',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Start Free
+                        </button>
                     </div>
 
                     {/* Pro Plan */}
@@ -246,6 +255,24 @@ export default function UpgradePage() {
                             disabled={loading}
                         >
                             {loading ? 'Processing...' : 'Upgrade with SOL 🚀'}
+                        </button>
+
+                        {/* TRIAL BUTTON MOVED HERE */}
+                        <button
+                            onClick={handleTrial}
+                            disabled={loading}
+                            style={{
+                                marginTop: 15,
+                                background: 'transparent',
+                                color: '#888',
+                                border: 'none',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                width: '100%'
+                            }}
+                        >
+                            Or start a 3-day free trial
                         </button>
                     </div>
                 </div>
