@@ -591,12 +591,166 @@
     transform: scale(1.05);
 }
 
-.errorContent {
-    background: rgba(255, 0, 0, 0.1);
-    border: 1px solid var(--danger);
-    color: var(--danger);
-    padding: 24px;
-    border-radius: 16px;
-    margin-top: 40px;
-    text-align: center;
+/* ============================================
+   Mobile Responsiveness (Added)
+   ============================================ */
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+    }
+
+    /* 1. Stack Header */
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .headerLeft,
+    .headerRight {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .searchForm {
+        width: 100%;
+    }
+
+    .inputWrapper {
+        flex: 1;
+    }
+
+    .searchInput {
+        width: 100%;
+        /* Full width search */
+    }
+
+    /* 2. Wallet Overview Stack */
+    .glassCard>div {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 24px !important;
+    }
+
+    .glassCard>div>div {
+        width: 100%;
+    }
+
+    /* Move Balance & Copytrade to align better */
+    .glassCard .value {
+        font-size: 24px !important;
+    }
+
+    /* 3. Metrics Grid Stack */
+    .metricsGrid {
+        grid-template-columns: 1fr;
+        /* Stack vertically */
+        gap: 16px;
+    }
+
+    .statRow {
+        font-size: 13px;
+        /* Smaller text */
+    }
+
+    /* 4. Position History Table -> Cards */
+    .tableHeader {
+        display: none;
+        /* Hide headers */
+    }
+
+    .tableRow {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    /* Restore Token Cell Layout */
+    .tokenCell {
+        width: 100%;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Add Labels to Cells for Context */
+    .tableRow>div:nth-child(1) {
+        /* Status Badge */
+        order: -1;
+        /* Move to top left */
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tableRow>div:nth-child(1)::after {
+        content: "STATUS";
+        font-size: 10px;
+        color: var(--text-muted);
+        font-weight: 700;
+    }
+
+    /* PnL Cell */
+    .tableRow>div:nth-child(3) {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tableRow>div:nth-child(3)::before {
+        content: "PnL (ROI):";
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    /* Held Info */
+    .tableRow>div:nth-child(4) {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tableRow>div:nth-child(4)::before {
+        content: "Held Status:";
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    /* Trades B/S */
+    .tableRow>span:nth-child(5) {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tableRow>span:nth-child(5)::before {
+        content: "Trades (B/S):";
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    /* Hold Time */
+    .tableRow>span:nth-child(6) {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tableRow>span:nth-child(6)::before {
+        content: "Hold Time:";
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
 }

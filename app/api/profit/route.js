@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getOrCreateUser, canUseAnalysis, recordUsage } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
+import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 
 export async function POST(request) {
     try {
@@ -84,7 +85,6 @@ export async function POST(request) {
         let priceMap = {};
 
         if (uniqueMintsToFetch.length > 0) {
-            const { getBatchTokenPrices } = require('@/lib/dexscreener');
             priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90)); // Limit to 90 to be safe
         }
 
@@ -92,7 +92,6 @@ export async function POST(request) {
         // 5a. Fetch SOL Price (wSOL)
         let solPrice = 0;
         try {
-            const { getTokenData } = require('@/lib/dexscreener');
             const wSOL = 'So11111111111111111111111111111111111111112';
             const wSolData = await getTokenData(wSOL);
             solPrice = wSolData.price;

@@ -47,9 +47,31 @@
     backdrop-filter: blur(10px);
 }
 
-.logoImage {
+
+/* Logo & Header Responsive */
+.logoContainer {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.logoDesktop {
     height: 40px;
     width: auto;
+    display: block;
+}
+
+.logoMobile {
+    height: 32px;
+    width: auto;
+    display: none;
+    border-radius: 50%;
+}
+
+.betaWrapper {
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease;
 }
 
 .nav {
@@ -57,6 +79,41 @@
     align-items: center;
     gap: 16px;
 }
+
+@media (max-width: 768px) {
+    .header {
+        padding: 16px 20px;
+    }
+
+    /* Logo Swap */
+    .logoDesktop {
+        display: none !important;
+    }
+
+    .logoMobile {
+        display: block !important;
+    }
+
+    /* Scale Beta Badge */
+    .betaWrapper {
+        transform: scale(0.7);
+        transform-origin: left center;
+        margin-left: 4px;
+        margin-top: 1px;
+    }
+
+    /* Compact Trial/Premium Badge */
+    .badge {
+        padding: 4px 10px;
+        font-size: 10px;
+        white-space: nowrap;
+        max-width: 140px;
+        /* Prevent it from being too wide */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
 
 .badge {
     padding: 6px 12px;

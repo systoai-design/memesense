@@ -220,9 +220,12 @@ export default function UpgradePage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <div onClick={() => router.push('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <img src="/logo.png" alt="MemeSense" style={{ height: 40 }} />
-                    <BetaBadge />
+                <div onClick={() => router.push('/')} className={styles.logoContainer} style={{ cursor: 'pointer' }}>
+                    <img src="/logo.png" alt="MemeSense" className={styles.logoDesktop} />
+                    <img src="/icon.png" alt="MemeSense" className={styles.logoMobile} />
+                    <div className={styles.betaWrapper}>
+                        <BetaBadge />
+                    </div>
                 </div>
             </header>
 
