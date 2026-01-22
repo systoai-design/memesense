@@ -436,6 +436,22 @@ export default function Home() {
         return () => clearInterval(interval);
     }, []);
 
+    // Scroll listener for dynamic header
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 20) {
+                setIsScrolled(true);
+            } else {
+                setIsScrolled(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     // Waitlist Logic
     const [waitlistEmail, setWaitlistEmail] = useState('');
     const [waitlistJoined, setWaitlistJoined] = useState(false);
@@ -450,10 +466,15 @@ export default function Home() {
     return (
         <div className={styles.page}>
             {/* ===== HEADER ===== */}
-            <header className={styles.header}>
-                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ display: 'flex', alignItems: 'center' }}>
-                    <img src="/logo.png" alt="MemeSense" className={styles.logo} style={{ height: '60px', width: 'auto' }} />
-                    <BetaBadge />
+            <header className={`${styles.header} ${isScrolled ? styles.headerScrolled : ''}`}>
+                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={styles.logoContainer}>
+                    {/* Desktop Logo */}
+                    <img src="/logo.png" alt="MemeSense" className={styles.logoDesktop} />
+                    {/* Mobile Icon (Favicon style) */}
+                    <img src="/icon.png" alt="MemeSense" className={styles.logoMobile} />
+                    <div className={styles.betaWrapper}>
+                        <BetaBadge />
+                    </div>
                 </a>
                 <nav className={styles.nav}>
                     <a href="#features" className={styles.navLink}>Features</a>

@@ -798,38 +798,125 @@
 /* Holders List */
 .holdersList {
     list-style: none;
-    margin-top: 20px;
     padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .holderItem {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--bg-tertiary);
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
     font-size: 13px;
-}
-
-.holderItem:last-child {
-    border-bottom: none;
+    border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .holderRank {
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
     color: var(--text-muted);
-    font-size: 11px;
     width: 24px;
 }
 
 .holderAddress {
-    font-family: var(--font-mono);
     color: var(--text-secondary);
-    opacity: 0.8;
+    font-family: var(--font-mono);
 }
 
 .holderBalance {
     font-weight: 600;
-    color: var(--text-primary);
+}
+
+.systemLabel {
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ============================================
+   Mobile Responsiveness (Added)
+   ============================================ */
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+    }
+
+    /* Stack Header */
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .headerRight {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .headerRight>* {
+        flex: 1;
+        /* Expand buttons */
+    }
+
+    /* Token Info Stack */
+    .tokenHeader {
+        flex-direction: column;
+        padding: 16px;
+        align-items: flex-start;
+    }
+
+    .priceInfo {
+        text-align: left;
+        width: 100%;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .tokenName {
+        font-size: 24px;
+        flex-wrap: wrap;
+    }
+
+    .tokenSymbol {
+        font-size: 14px;
+    }
+
+    /* Analysis Grid Stack */
+    .analysisGrid {
+        grid-template-columns: 1fr !important;
+        gap: 16px;
+    }
+
+    /* Metrics Grid - Keep 2 cols on mobile but tighter, or 1 col if very small */
+    .metricsGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* Profit Gauge Scale */
+    .profitCard {
+        padding: 20px 16px;
+    }
+
+    .recommendation {
+        font-size: 16px;
+        padding: 8px 20px;
+    }
 }
 
 .warning {

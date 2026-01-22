@@ -203,9 +203,12 @@ export default function AppHome() {
             {/* Header */}
             <header className={styles.header}>
                 <div className={styles.navGroup}>
-                    <a href="/app" style={{ display: 'flex', alignItems: 'center' }}>
-                        <img src="/logo.png" alt="MemeSense" className={styles.logoImage} style={{ height: '60px', width: 'auto' }} />
-                        <BetaBadge />
+                    <a href="/app" className={styles.logoContainer}>
+                        <img src="/logo.png" alt="MemeSense" className={styles.logoDesktop} />
+                        <img src="/icon.png" alt="MemeSense" className={styles.logoMobile} />
+                        <div className={styles.betaWrapper}>
+                            <BetaBadge />
+                        </div>
                     </a>
                 </div>
                 <div className={styles.navGroup}>

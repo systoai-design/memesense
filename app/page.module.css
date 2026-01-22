@@ -21,8 +21,9 @@
 .header {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
   z-index: 1000;
   display: flex;
   justify-content: space-between;
@@ -30,9 +31,101 @@
   padding: 16px 48px;
   background: rgba(5, 5, 5, 0.8);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  max-width: 100%;
 }
 
+.headerScrolled {
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90%, 800px);
+  border-radius: 100px;
+  padding: 8px 32px;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .headerScrolled {
+    width: calc(100% - 24px);
+    top: 12px;
+    padding: 6px 12px;
+  }
+
+  /* Swap Logos on Mobile */
+  .logoDesktop {
+    display: none !important;
+  }
+
+  .logoMobile {
+    display: block !important;
+    height: 32px;
+    width: auto;
+    border-radius: 50%;
+  }
+
+  /* Shrink Beta Badge */
+  .betaWrapper {
+    transform: scale(0.7);
+    transform-origin: left center;
+    margin-left: 4px;
+    margin-top: 1px;
+  }
+
+  /* Compact CTA */
+  .headerCta {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoDesktop {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
+.logoMobile {
+  height: 32px;
+  width: auto;
+  display: none;
+  /* Hidden by default on desktop */
+}
+
+.betaWrapper {
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+/* Legacy support if needed, or removing .logo since we use specific classes now */
 .logo {
   height: 36px;
   width: auto;
@@ -709,26 +802,56 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 32px;
-  /* Premium Glass Style */
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  border-radius: var(--radius-lg);
+  padding: 40px 32px;
+  /* Dark Liquid Glass Style (Updated) */
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 32px;
   flex: 1;
   max-width: 280px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transform-style: preserve-3d;
-  transition: transform 0.3s ease, border-color 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing Border Effect */
+.step::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.4), transparent 50%, rgba(204, 255, 0, 0.1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Inner highlight for volume */
+.step::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .step:hover {
-  border-color: rgba(204, 255, 0, 0.3);
+  transform: translateY(-10px) rotateX(5deg);
   box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(204, 255, 0, 0.1);
+    0 30px 60px -12px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(204, 255, 0, 0.15);
+  border-color: rgba(204, 255, 0, 0.3);
 }
 
 .stepNumber {
