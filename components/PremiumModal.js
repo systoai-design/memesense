@@ -187,7 +187,7 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 )}
 
                 <p style={{ marginTop: '15px', fontSize: '0.8rem', color: '#666' }}>
-                    One-time payment. Lifetime access.
+                    One-time payment. Lifetime access. v2.0
                 </p>
 
                 {/* Trial Activation Option */}
