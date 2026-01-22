@@ -25,7 +25,9 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
 
         try {
             // 1. Establish Connection
-            const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
+            // Use local proxy to avoid 403 errors and hide API keys
+            // The browser will resolve '/api/rpc' to the current domain
+            const connection = new Connection('/api/rpc', 'confirmed');
             const fromPubkey = new PublicKey(walletAddress);
             const toPubkey = new PublicKey(ADMIN_WALLET);
 
