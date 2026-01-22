@@ -3,28 +3,8 @@
    Complete Redesign - 2026
    =================================== */
 
-/* CSS Variables */
-:root {
-  --bg-primary: #050505;
-  --bg-card: rgba(18, 18, 20, 0.8);
-  --bg-card-hover: rgba(28, 28, 32, 0.9);
-  --primary: #CCFF00;
-  --primary-dim: #a3cc00;
-  --primary-glow: rgba(204, 255, 0, 0.15);
-  --primary-glow-strong: rgba(204, 255, 0, 0.3);
-  --text-primary: #FFFFFF;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.15);
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
-  --radius-xl: 32px;
-  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --font-heading: var(--font-heading);
-}
+/* CSS Variables moved to globals.css */
+
 
 /* Base Container */
 .page {

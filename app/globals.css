@@ -70,6 +70,12 @@
     --radius-lg: 24px;
     --radius-xl: 32px;
     --radius-full: 9999px;
+
+    /* Extra variables from page.module.css */
+    --bg-card-hover: rgba(28, 28, 32, 0.9);
+    --primary-glow-strong: rgba(204, 255, 0, 0.3);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    /* Ensure radius consistency if needed */
 }
 
 /* Enforce Dark Theme for everything */

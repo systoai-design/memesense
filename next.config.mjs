@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use empty turbopack config to silence Turbopack warning
-  turbopack: {},
+  // Config cleaned up for Next.js 15
 };
 
 export default nextConfig;
