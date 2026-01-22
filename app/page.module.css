@@ -149,6 +149,42 @@
   color: var(--text-primary);
 }
 
+/* Social Group in Header */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.socialGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.socialIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-decoration: none;
+}
+
+.socialIcon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .headerCta {
   padding: 10px 24px;
   background: var(--primary);
