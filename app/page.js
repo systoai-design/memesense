@@ -16,7 +16,9 @@ import {
     ChevronRight,
     TrendingUp,
     AlertTriangle,
-    X
+    X,
+    Twitter,
+    BookOpen
 } from 'lucide-react';
 import styles from './page.module.css';
 import BetaBadge from '@/components/BetaBadge';
@@ -481,7 +483,20 @@ export default function Home() {
                     <a href="#how-it-works" className={styles.navLink}>How It Works</a>
                     <a href="#pricing" className={styles.navLink}>Pricing</a>
                 </nav>
-                <a href="/app" target="_blank" className={styles.headerCta}>🚀 Launch App</a>
+                <div className={styles.headerRight}>
+                    <div className={styles.socialGroup}>
+                        <a href="https://x.com/memesenseonsol" target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Twitter">
+                            <img src="/x-icon.png" alt="X (Twitter)" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                        </a>
+                        <a href="https://meme-sense.gitbook.io/docs/" target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Documentation">
+                            <BookOpen size={18} />
+                        </a>
+                        <a href="https://pump.fun/" target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Pump.fun">
+                            <img src="/pump.png" alt="Pump.fun" style={{ width: 18, height: 18, borderRadius: '50%' }} />
+                        </a>
+                    </div>
+                    <a href="/app" target="_blank" className={styles.headerCta}>🚀 Launch App</a>
+                </div>
             </header>
 
             {/* ===== HERO SECTION ===== */}
@@ -871,9 +886,9 @@ export default function Home() {
                         AI-powered memecoin analysis. Powered by Grok. Not financial advice. Trade responsibly.
                     </p>
                     <div className={styles.footerLinks}>
-                        <a href="#">Twitter</a>
-                        <a href="#">Discord</a>
-                        <a href="#">GitHub</a>
+                        <a href="https://x.com/memesenseonsol" target="_blank" rel="noopener noreferrer">Twitter</a>
+                        <Link href="/privacy">Privacy</Link>
+                        <Link href="/terms">Terms</Link>
                     </div>
                 </div>
                 <div className={styles.footerCopyright}>
