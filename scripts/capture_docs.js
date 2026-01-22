@@ -1,4 +1,10 @@
-const puppeteer = require('puppeteer');
+// Safely require puppeteer (it's a devDependency, not present in Prod)
+let puppeteer;
+try {
+    puppeteer = require('puppeteer');
+} catch (e) {
+    console.log('Puppeteer not found (safely ignored for production build)');
+}
 const fs = require('fs');
 const path = require('path');
 
