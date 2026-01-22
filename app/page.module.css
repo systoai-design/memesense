@@ -700,6 +700,8 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
+  perspective: 1000px;
+  /* Enable 3D space */
 }
 
 .step {
@@ -708,11 +710,25 @@
   align-items: center;
   text-align: center;
   padding: 32px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  /* Premium Glass Style */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
   border-radius: var(--radius-lg);
   flex: 1;
   max-width: 280px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.step:hover {
+  border-color: rgba(204, 255, 0, 0.3);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(204, 255, 0, 0.1);
 }
 
 .stepNumber {
@@ -728,12 +744,14 @@
   font-weight: 700;
   color: var(--primary);
   margin-bottom: 20px;
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.1);
 }
 
 .stepTitle {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
+  color: #fff;
 }
 
 .stepDesc {
@@ -746,6 +764,91 @@
   font-size: 24px;
   color: var(--text-muted);
   flex-shrink: 0;
+  opacity: 0.5;
+}
+
+/* 3D Animations - Desktop Only */
+@media (min-width: 769px) {
+
+  /* Step 1 (Left): Rotated Right */
+  .stepsGrid>div:nth-of-type(1) .step {
+    animation: floatStepLeft 6s ease-in-out infinite;
+  }
+
+  /* Step 2 (Center): Floating Up/Down */
+  .stepsGrid>div:nth-of-type(2) .step {
+    animation: floatStepCenter 6s ease-in-out infinite;
+    animation-delay: 1s;
+    z-index: 10;
+    /* Bring center forward */
+  }
+
+  /* Step 3 (Right): Rotated Left */
+  .stepsGrid>div:nth-of-type(3) .step {
+    animation: floatStepRight 6s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+}
+
+@keyframes floatStepLeft {
+
+  0%,
+  100% {
+    transform: translateY(0) rotateY(15deg) translateZ(0);
+  }
+
+  50% {
+    transform: translateY(-15px) rotateY(12deg) translateZ(10px);
+  }
+}
+
+@keyframes floatStepCenter {
+
+  0%,
+  100% {
+    transform: translateY(0) translateZ(20px);
+  }
+
+  50% {
+    transform: translateY(-15px) translateZ(30px);
+  }
+}
+
+@keyframes floatStepRight {
+
+  0%,
+  100% {
+    transform: translateY(0) rotateY(-15deg) translateZ(0);
+  }
+
+  50% {
+    transform: translateY(-15px) rotateY(-12deg) translateZ(10px);
+  }
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  .stepsGrid {
+    flex-direction: column;
+    gap: 40px;
+    perspective: none;
+    /* Disable 3D on mobile */
+  }
+
+  .stepArrow {
+    transform: rotate(90deg);
+    /* Point down */
+    margin: -10px 0;
+  }
+
+  .step {
+    width: 100%;
+    max-width: 100%;
+    transform: none !important;
+    /* Force disable 3D transform */
+    animation: none !important;
+    /* Disable float animation on mobile for stability */
+  }
 }
 
 /* ===== SPEED FEATURES (3x2 Grid) ===== */
