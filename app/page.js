@@ -149,6 +149,61 @@ const PhoneMockup = () => {
     );
 };
 
+// ===== BROWSER MOCKUP COMPONENT =====
+const BrowserMockup = () => {
+    return (
+        <div className={styles.browserMockupWrapper}>
+            <div className={styles.browserWindow}>
+                {/* Browser Bar */}
+                <div className={styles.browserBar}>
+                    <div className={styles.browserDots}>
+                        <div className={styles.browserDot} style={{ background: '#ff5f56' }}></div>
+                        <div className={styles.browserDot} style={{ background: '#ffbd2e' }}></div>
+                        <div className={styles.browserDot} style={{ background: '#27c93f' }}></div>
+                    </div>
+                    <div className={styles.browserAddress}>
+                        pump.fun/coin/8xL...
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className={styles.browserContent}>
+                    {/* Simulated Pump Grid */}
+                    <div className={styles.pumpGrid}>
+                        {[...Array(9)].map((_, i) => (
+                            <div key={i} className={styles.pumpItem}></div>
+                        ))}
+                    </div>
+
+                    {/* Overlay */}
+                    <div className={styles.extensionOverlay}>
+                        <div className={styles.overlayHeader}>
+                            <div className={styles.overlayTitle}>
+                                <Sparkles size={12} /> MemeSense Overlay
+                            </div>
+                        </div>
+                        <div className={styles.overlayScore}>85/100</div>
+                        <div className={styles.overlayLabel}>Safety Score</div>
+
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Dev History</span>
+                            <span style={{ color: '#ccff00' }}>CLEAN</span>
+                        </div>
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Sniper</span>
+                            <span style={{ color: '#fff' }}>0%</span>
+                        </div>
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Trend</span>
+                            <span style={{ color: '#ccff00' }}>Type II Buy</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ===== INTERACTIVE DEMO COMPONENT =====
 const DemoSection = () => {
     const [input, setInput] = useState('');
@@ -184,6 +239,7 @@ const DemoSection = () => {
                         type: 'wallet',
                         totalProfit: metrics.totalRealizedPnL || 0,
                         winRate: metrics.winRate || 0,
+                        profitFactor: metrics.profitFactor || 0,
                         realizedPnL: metrics.totalRealizedPnL || 0,
                         trades: metrics.totalTrades || 0,
                         verdict: ai.status || (metrics.totalRealizedPnL > 0 ? 'PROFITABLE' : 'UNPROFITABLE'),
@@ -249,7 +305,7 @@ const DemoSection = () => {
                 </h2>
                 <p className={styles.sectionSubtitle}>
                     {mode === 'token'
-                        ? 'Paste any pump.fun token address to get an instant verdict'
+                        ? 'Paste any Solana token address to get an instant verdict'
                         : 'Paste a wallet address to sense its historical profitability'}
                 </p>
             </Reveal>
@@ -398,14 +454,20 @@ const DemoSection = () => {
 
                             <div className={styles.demoMetrics}>
                                 <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Win Rate</span>
-                                    <span className={styles.demoMetricValue}>{result.winRate}%</span>
+                                    <span className={styles.demoMetricLabel}>Profit Factor</span>
+                                    <span className={styles.demoMetricValue} style={{ color: result.profitFactor >= 2 ? '#CCFF00' : '#fff' }}>
+                                        {result.profitFactor.toFixed(2)}x
+                                    </span>
                                 </div>
                                 <div className={styles.demoMetric}>
                                     <span className={styles.demoMetricLabel}>Total Profit</span>
                                     <span className={styles.demoMetricValue} style={{ color: result.totalProfit >= 0 ? '#ccff00' : '#ff4444' }}>
                                         {result.totalProfit.toFixed(2)} SOL
                                     </span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Win Rate</span>
+                                    <span className={styles.demoMetricValue}>{result.winRate}%</span>
                                 </div>
                                 <div className={styles.demoMetric}>
                                     <span className={styles.demoMetricLabel}>Trades</span>
@@ -454,16 +516,7 @@ export default function Home() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Waitlist Logic
-    const [waitlistEmail, setWaitlistEmail] = useState('');
-    const [waitlistJoined, setWaitlistJoined] = useState(false);
 
-    const handleWaitlistSubmit = (e) => {
-        e.preventDefault();
-        if (!waitlistEmail) return;
-        setWaitlistJoined(true); // Simulate success
-        setWaitlistEmail('');
-    };
 
     return (
         <div className={styles.page}>
@@ -510,14 +563,14 @@ export default function Home() {
                 <Reveal className={styles.heroContent}>
                     <div className={styles.heroBadge}>
                         <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} />
-                        AI-Powered Analysis
+                        AI-Powered by Grok
                     </div>
                     <h1 className={styles.heroTitle}>
                         Stop Guessing. <br />
                         <span className={styles.heroTitleGradient}>Start Winning on Solana.</span>
                     </h1>
                     <p className={styles.heroSubtitle}>
-                        Rank #1 in profits with MemeSense. The ultimate AI tool to track wallets, analyze token risks, and spot 100x gems on Pump.fun before they moon.
+                        Rank #1 in profits with MemeSense. The ultimate AI tool to track wallets, analyze token risks, and spot 100x gems on Solana before they moon.
                     </p>
                     <div className={styles.heroCtas}>
                         <a href="/app" target="_blank" className={styles.ctaPrimary}>
@@ -666,7 +719,7 @@ export default function Home() {
                         <div className={styles.step}>
                             <div className={styles.stepNumber}>1</div>
                             <h3 className={styles.stepTitle}>Paste Address</h3>
-                            <p className={styles.stepDesc}>Copy the token contract address from pump.fun</p>
+                            <p className={styles.stepDesc}>Copy the token contract address from Pump.fun or Bonk.fun</p>
                         </div>
                     </Reveal>
                     <span className={styles.stepArrow}>→</span>
@@ -757,48 +810,56 @@ export default function Home() {
             </section>
 
             {/* ===== MOBILE SHOWCASE ===== */}
+            {/* ===== UPCOMING ECOSYSTEM ===== */}
             <section className={styles.section}>
-                <div className={styles.mobileSection}>
-                    <Reveal className={styles.mobileContent}>
-                        <div className={styles.sectionBadge}>
-                            <Smartphone size={14} style={{ display: 'inline', marginRight: 6 }} />
-                            COMING SOON
-                        </div>
-                        <h2 className={styles.mobileTitle}>
-                            Analysis on the Go.<br />
-                            <span className={styles.heroTitleGradient}>Pocket Terminals.</span>
-                        </h2>
-                        <p className={styles.mobileDesc}>
-                            The full power of MemeSense, optimized for your phone.
-                            Get push notifications for whale movements and rug alerts instantly.
-                        </p>
-                        <ul className={styles.mobileFeatures}>
-                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> Instant Push Notifications</li>
-                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> Biometric Login</li>
-                            <li><Check size={16} color="#CCFF00" style={{ marginRight: 8 }} /> One-tap Quick Sense</li>
-                        </ul>
-                        {waitlistJoined ? (
-                            <div className={styles.waitlistSuccess}>
-                                <Check size={20} />
-                                <span>We will inform you for the release! 🚀</span>
+                <Reveal className={styles.sectionHeader}>
+                    <div className={styles.sectionBadge}>
+                        <Rocket size={14} style={{ display: 'inline', marginRight: 6 }} />
+                        ROADMAP Q1 2026
+                    </div>
+                    <h2 className={styles.sectionTitle}>
+                        The MemeSense <span className={styles.heroTitleGradient}>Ecosystem</span>
+                    </h2>
+                    <p className={styles.sectionSubtitle}>
+                        Expanding your edge with tools that fit your workflow.
+                    </p>
+                </Reveal>
+
+                <div className={styles.roadmapGrid}>
+                    {/* Mobile App Card */}
+                    <Reveal className={styles.roadmapItem} delay={0}>
+                        <div className={styles.roadmapText}>
+                            <h3 className={styles.roadmapTitle}>Mobile App</h3>
+                            <p className={styles.roadmapDesc}>
+                                Your pocket terminal. Receive instant push notifications for whale movements, rug pulls, and trend alerts. Trade securely with biometric authentication.
+                            </p>
+                            <div className={styles.roadmapList}>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Instant Push Alerts</div>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Biometric Security</div>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> One-tap Quick Sense</div>
                             </div>
-                        ) : (
-                            <form onSubmit={handleWaitlistSubmit} className={styles.waitlistForm}>
-                                <input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    className={styles.waitlistInput}
-                                    value={waitlistEmail}
-                                    onChange={(e) => setWaitlistEmail(e.target.value)}
-                                    required
-                                />
-                                <button type="submit" className={styles.ctaPrimary}>Join Waitlist</button>
-                            </form>
-                        )}
+                        </div>
+                        <div className={styles.roadmapVisual}>
+                            <PhoneMockup />
+                        </div>
                     </Reveal>
 
-                    <Reveal className={styles.mobileVisual} delay={200}>
-                        <PhoneMockup />
+                    {/* Extension Card */}
+                    <Reveal className={styles.roadmapItem} delay={200}>
+                        <div className={styles.roadmapText}>
+                            <h3 className={styles.roadmapTitle}>Live Sense Extension</h3>
+                            <p className={styles.roadmapDesc}>
+                                The "God Mode" for Pump.fun. Overlay real-time safety scores, developer history, and social sentiment directly on the interface.
+                            </p>
+                            <div className={styles.roadmapList}>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Live Overlay HUD</div>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Auto-Rug Detection</div>
+                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Tweet Volume Correlation</div>
+                            </div>
+                        </div>
+                        <div className={styles.roadmapVisual}>
+                            <BrowserMockup />
+                        </div>
                     </Reveal>
                 </div>
             </section>
@@ -872,7 +933,7 @@ export default function Home() {
                 <Reveal>
                     <div className={styles.ctaCard}>
                         <h2 className={styles.ctaTitle}>Ready to Trade Smarter?</h2>
-                        <p className={styles.ctaDesc}>Analyze any pump.fun token in seconds. Free forever.</p>
+                        <p className={styles.ctaDesc}>Analyze any Solana token in seconds. Free forever.</p>
                         <a href="/app" target="_blank" className={styles.ctaPrimary}>
                             <Rocket size={18} /> Launch App Now
                         </a>

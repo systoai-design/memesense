@@ -14,9 +14,59 @@ import BetaBadge from '@/components/BetaBadge';
 export default function ProfitPage() {
     const { wallet: walletParam } = useParams();
     const router = useRouter();
-    // Wallet adapter temporarily disabled - pending dependency fix
-    const publicKey = null;
-    const connected = false;
+
+    // Wallet Connection State
+    const [connectedWallet, setConnectedWallet] = useState(null);
+    const [isWalletConnected, setIsWalletConnected] = useState(false);
+
+    const getProvider = () => {
+        if ('phantom' in window) {
+            const provider = window.phantom?.solana;
+            if (provider?.isPhantom) {
+                return provider;
+            }
+        }
+        return null;
+    };
+
+    useEffect(() => {
+        const provider = getProvider();
+        if (provider) {
+            provider.connect({ onlyIfTrusted: true })
+                .then((resp) => {
+                    setConnectedWallet(resp.publicKey.toString());
+                    setIsWalletConnected(true);
+                })
+                .catch(() => {
+                    // Not connected
+                });
+
+            provider.on("connect", (publicKey) => {
+                setConnectedWallet(publicKey.toString());
+                setIsWalletConnected(true);
+            });
+
+            provider.on("disconnect", () => {
+                setConnectedWallet(null);
+                setIsWalletConnected(false);
+            });
+        }
+    }, []);
+
+    const connectWallet = async () => {
+        const provider = getProvider();
+        if (provider) {
+            try {
+                const resp = await provider.connect();
+                setConnectedWallet(resp.publicKey.toString());
+                setIsWalletConnected(true);
+            } catch (err) {
+                console.error("User rejected connection", err);
+            }
+        } else {
+            window.open('https://phantom.app/', '_blank');
+        }
+    };
     const [searchInput, setSearchInput] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -47,7 +97,7 @@ export default function ProfitPage() {
         if (walletToAnalyze) {
             analyzeWallet(walletToAnalyze);
         }
-    }, [walletToAnalyze, publicKey]); // Re-run if connected wallet changes (might unlock premium)
+    }, [walletToAnalyze, connectedWallet]); // Re-run if connected wallet changes (might unlock premium)
 
     async function analyzeWallet(address) {
         setLoading(true);
@@ -55,7 +105,7 @@ export default function ProfitPage() {
 
         try {
             const deviceId = localStorage.getItem('memesense_device_id') || 'unknown';
-            const userWallet = publicKey ? publicKey.toString() : null;
+            const userWallet = connectedWallet;
 
             const res = await fetch('/api/profit', {
                 method: 'POST',
@@ -132,10 +182,28 @@ export default function ProfitPage() {
                     <div className={styles.lockContent}>
                         <Lock className={styles.lockIcon} size={64} />
                         <h2>Premium Feature</h2>
-                        <p>Unlock the Wallet Profitability Tracker to spy on smart money and track your own performance.</p>
-                        <button className={styles.upgradeBtn} onClick={() => router.push('/upgrade')}>
-                            Upgrade Now
-                        </button>
+
+                        {!isWalletConnected ? (
+                            <>
+                                <p>Unlock the Wallet Profitability Tracker by connecting your Premium wallet.</p>
+                                <button className={styles.upgradeBtn} onClick={connectWallet} style={{ background: '#00d47e', color: '#000' }}>
+                                    <Wallet size={18} /> Connect Wallet to Unlock
+                                </button>
+                                <div style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
+                                    Don't have access? <span onClick={() => router.push('/upgrade')} style={{ textDecoration: 'underline', cursor: 'pointer' }}>Upgrade Now</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p>Your connected wallet does not have Premium access.</p>
+                                <button className={styles.upgradeBtn} onClick={() => router.push('/upgrade')}>
+                                    Upgrade Now
+                                </button>
+                                <button onClick={() => { localStorage.removeItem('memesense_device_id'); window.location.reload(); }} style={{ marginTop: 12, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>
+                                    Switch Wallet / Reset
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -173,6 +241,37 @@ export default function ProfitPage() {
                 </div>
 
                 <div className={styles.headerRight}>
+                    {!isWalletConnected ? (
+                        <button
+                            onClick={connectWallet}
+                            className={styles.scanBtn}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                marginRight: 12
+                            }}
+                        >
+                            <Wallet size={16} /> Connect
+                        </button>
+                    ) : (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            marginRight: 12,
+                            background: 'rgba(0, 212, 126, 0.1)',
+                            border: '1px solid #00d47e',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: 13,
+                            color: '#00d47e',
+                            fontWeight: 700
+                        }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00d47e' }} />
+                            {connectedWallet?.slice(0, 4)}...{connectedWallet?.slice(-4)}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSearch} className={styles.searchForm}>
                         <div className={styles.inputWrapper}>
                             <Search className={styles.inputIcon} size={16} />

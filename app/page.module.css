@@ -2149,3 +2149,278 @@
     transform: scale(0.85);
   }
 }
+
+/* ===== UPCOMING / ROADMAP SECTION ===== */
+.roadmapGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.roadmapItem {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 48px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  transition: all var(--transition);
+}
+
+.roadmapItem:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 40px rgba(204, 255, 0, 0.05);
+}
+
+.roadmapText {
+  z-index: 10;
+  max-width: 400px;
+}
+
+.roadmapTitle {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.roadmapDesc {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+
+.roadmapList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.roadmapVisual {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 400px;
+  margin-bottom: -48px;
+  /* Pull visual down */
+}
+
+/* ===== BROWSER MOCKUP ===== */
+.browserMockupWrapper {
+  perspective: 1000px;
+}
+
+.browserWindow {
+  width: 100%;
+  max-width: 500px;
+  height: 350px;
+  background: #0a0a0f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Softer Border */
+  border-radius: 16px;
+  /* increased roundedness */
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  /* inner stroke */
+  overflow: hidden;
+  transform: rotateY(-5deg) rotateX(2deg);
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.roadmapItem:hover .browserWindow {
+  transform: rotateY(0) rotateX(0) translateY(-10px);
+}
+
+.browserBar {
+  height: 48px;
+  /* Taller bar */
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+
+.browserDots {
+  display: flex;
+  gap: 8px;
+}
+
+.browserDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  /* Keep colors but maybe slightly muted or gradient? Standard is fine */
+}
+
+.browserAddress {
+  flex: 1;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  /* softer */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Center text */
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.browserContent {
+  position: relative;
+  height: calc(100% - 48px);
+  background: #000;
+  /* Darker bg for contrast with pump grid */
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Background grid simulation */
+.pumpGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  opacity: 0.15;
+  /* Subtler */
+  filter: blur(1px);
+  /* slight blur to push to background */
+}
+
+.pumpItem {
+  height: 100px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* The Overlay Itself */
+.extensionOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Start centered */
+  width: 260px;
+  /* Slightly narrower for nicer proportions */
+
+  /* Glassmorphism */
+  background: rgba(15, 15, 15, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  /* light source top */
+  border-radius: 20px;
+  padding: 24px;
+
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    /* border separation */
+    0 0 40px rgba(0, 0, 0, 0.5);
+  /* deep shadow */
+
+  z-index: 100;
+
+  opacity: 0;
+  animation: scaleIn 0.6s 0.2s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.95);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+}
+
+.overlayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.overlayTitle {
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+}
+
+.overlayScore {
+  font-size: 36px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 8px;
+  text-shadow: 0 0 30px rgba(204, 255, 0, 0.2);
+  /* Gradient Text */
+  background: linear-gradient(180deg, #fff, #aaa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.overlayLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--primary);
+  /* Use lime for label */
+  text-align: center;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.overlayStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+.overlayStat:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1024px) {
+  .roadmapGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmapItem {
+    padding: 32px;
+  }
+}

@@ -605,25 +605,58 @@
         align-items: flex-start;
         gap: 16px;
         padding: 16px;
+        height: auto;
+        /* Allow height to grow */
     }
 
-    .headerLeft,
+    .headerLeft {
+        width: 100%;
+        justify-content: space-between;
+    }
+
     .headerRight {
         width: 100%;
+        display: flex;
+        flex-direction: column-reverse;
+        /* Put Connect button below search or handle differently? No, let's keep standard stack */
+        gap: 12px;
+    }
+
+    /* Better stacking for header Right elements on mobile */
+    .headerRight {
+        flex-direction: row;
+        flex-wrap: wrap;
         justify-content: space-between;
     }
 
     .searchForm {
         width: 100%;
+        order: 2;
+        /* Move search to bottom row */
+        margin-top: 8px;
     }
 
     .inputWrapper {
         flex: 1;
+        width: 100%;
     }
 
     .searchInput {
         width: 100%;
         /* Full width search */
+        font-size: 16px;
+        /* prevent zoom on mobile */
+    }
+
+    /* Connect/Wallet Badge on Mobile */
+    .headerRight>div:first-child,
+    /* The Wallet Pill */
+    .headerRight>button:first-child
+
+    /* The Connect Button */
+        {
+        margin-right: 0 !important;
+        order: 1;
     }
 
     /* 2. Wallet Overview Stack */
