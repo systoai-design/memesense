@@ -9,8 +9,11 @@ export async function POST(request) {
         const body = await request.json();
         const { walletToAnalyze, deviceId, userWallet } = body;
 
+        console.log(`[ProfitAPI] Request: walletToAnalyze=${walletToAnalyze}, deviceId=${deviceId}, userWallet=${userWallet}`);
+
         // 1. Auth & Premium Check
         const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
+        console.log(`[ProfitAPI] User Resolved: ID=${user.id}, Tier=${user.tier}, Wallet=${user.wallet_address}`);
 
         // Admin Bypass
         const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
@@ -25,7 +28,13 @@ export async function POST(request) {
             return NextResponse.json({
                 success: false,
                 error: usageCheck.reason,
-                isPremiumLocked: true
+                isPremiumLocked: true,
+                debugInfo: {
+                    userId: user.id,
+                    tier: user.tier,
+                    receivedWallet: userWallet,
+                    subscriptionExpiry: user.subscription_expiry
+                }
             }, { status: 403 });
         }
 

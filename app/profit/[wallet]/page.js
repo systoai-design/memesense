@@ -91,6 +91,7 @@ export default function ProfitPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isPremium, setIsPremium] = useState(true);
+    const [debugInfo, setDebugInfo] = useState(null);
     const [timeWindow, setTimeWindow] = useState('7d'); // Default to 7d
 
     useEffect(() => {
@@ -131,6 +132,11 @@ export default function ProfitPage() {
                 } else {
                     setData(json.data);
                 }
+            }
+
+            // Debug Info for Lock Screen
+            if (json.debugInfo) {
+                setDebugInfo(json.debugInfo);
             }
 
         } catch (e) {
@@ -202,6 +208,14 @@ export default function ProfitPage() {
                                 <button onClick={() => { localStorage.removeItem('memesense_device_id'); window.location.reload(); }} style={{ marginTop: 12, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>
                                     Switch Wallet / Reset
                                 </button>
+                                {debugInfo && (
+                                    <div style={{ marginTop: 16, padding: 12, background: 'rgba(255,0,0,0.1)', borderRadius: 8, fontSize: 11, textAlign: 'left', color: '#ff6b6b' }}>
+                                        <strong>Debug Info:</strong><br />
+                                        Wallet: {debugInfo.receivedWallet?.slice(0, 6)}...<br />
+                                        Tier: {debugInfo.tier}<br />
+                                        User ID: {debugInfo.userId?.slice(0, 8)}...
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
