@@ -14,6 +14,9 @@ import BetaBadge from '@/components/BetaBadge';
 export default function ProfitPage() {
     const { wallet: walletParam } = useParams();
     const router = useRouter();
+    // Wallet adapter temporarily disabled - pending dependency fix
+    const publicKey = null;
+    const connected = false;
     const [searchInput, setSearchInput] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -31,9 +34,6 @@ export default function ProfitPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // Add Activity icon to imports if missing, or use existing imports
-
-
     // Decode wallet address if it's encoded or just use parameter
     const walletToAnalyze = decodeURIComponent(walletParam);
 
@@ -47,7 +47,7 @@ export default function ProfitPage() {
         if (walletToAnalyze) {
             analyzeWallet(walletToAnalyze);
         }
-    }, [walletToAnalyze]);
+    }, [walletToAnalyze, publicKey]); // Re-run if connected wallet changes (might unlock premium)
 
     async function analyzeWallet(address) {
         setLoading(true);
@@ -55,8 +55,7 @@ export default function ProfitPage() {
 
         try {
             const deviceId = localStorage.getItem('memesense_device_id') || 'unknown';
-            const userWallet = localStorage.getItem('memesense_wallet');
-            // We reuse the same header mock assumption as before
+            const userWallet = publicKey ? publicKey.toString() : null;
 
             const res = await fetch('/api/profit', {
                 method: 'POST',

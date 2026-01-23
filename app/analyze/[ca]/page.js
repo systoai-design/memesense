@@ -52,7 +52,7 @@ export default function AnalyzePage() {
         }
         localStorage.removeItem('memesense_wallet');
         setWalletAddress(null);
-        window.location.href = '/app'; // Redirect to home/app
+        window.location.href = '/app';
     };
 
     // Fetch analysis data
@@ -756,7 +756,7 @@ export default function AnalyzePage() {
                     {/* Rug Check */}
                     {rugStatus.riskLevel === 'HIGH' && (
                         <div className={styles.warningBanner} style={{ background: 'rgba(255, 0, 0, 0.1)', color: '#ff5555', border: '1px solid #ff5555' }}>
-                            🚨 <strong>RUG RISK DETECTED:</strong> {rugStatus.reasons[0]}
+                            🚨 <strong>RUG RISK DETECTED:</strong> {rugStatus.reasons?.[0] || 'High risk detected'}
                         </div>
                     )}
                 </div>

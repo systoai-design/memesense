@@ -35,7 +35,17 @@ export async function POST(request) {
 
         // 2. Fetch Data
         console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
-        const trades = await getWalletHistory(walletToAnalyze);
+        let trades = [];
+        try {
+            trades = await getWalletHistory(walletToAnalyze);
+        } catch (fetchError) {
+            console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
+            return NextResponse.json({
+                success: false,
+                error: `Helius API Error: ${fetchError.message}`,
+                data: null
+            }, { status: 500 });
+        }
 
         // Record usage if we seemingly got data (or just record attempt?)
         // Usually record usage only if we return value.

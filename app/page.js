@@ -486,7 +486,7 @@ export default function Home() {
                 <div className={styles.headerRight}>
                     <div className={styles.socialGroup}>
                         <a href="https://x.com/memesenseonsol" target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Twitter">
-                            <img src="/x-icon.png" alt="X (Twitter)" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                            <img src="/x-icon.png" alt="X (Twitter)" style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', padding: 2 }} />
                         </a>
                         <a href="https://meme-sense.gitbook.io/docs/" target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Documentation">
                             <BookOpen size={18} />
@@ -495,7 +495,9 @@ export default function Home() {
                             <img src="/pump.png" alt="Pump.fun" style={{ width: 18, height: 18, borderRadius: '50%' }} />
                         </a>
                     </div>
-                    <a href="/app" target="_blank" className={styles.headerCta}>🚀 Launch App</a>
+                    <a href="/app" target="_blank" className={styles.headerCta}>
+                        {isScrolled ? '🚀 Launch' : '🚀 Launch App'}
+                    </a>
                 </div>
             </header>
 
@@ -508,14 +510,14 @@ export default function Home() {
                 <Reveal className={styles.heroContent}>
                     <div className={styles.heroBadge}>
                         <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} />
-                        Powered by Grok
+                        AI-Powered Analysis
                     </div>
                     <h1 className={styles.heroTitle}>
-                        Sense Rugs & Gems <br />
-                        <span className={styles.heroTitleGradient}>Before they pump or dump</span>
+                        Stop Guessing. <br />
+                        <span className={styles.heroTitleGradient}>Start Winning on Solana.</span>
                     </h1>
                     <p className={styles.heroSubtitle}>
-                        Sense danger before it happens. Lessen your risk by sensing dangers beforehand
+                        Rank #1 in profits with MemeSense. The ultimate AI tool to track wallets, analyze token risks, and spot 100x gems on Pump.fun before they moon.
                     </p>
                     <div className={styles.heroCtas}>
                         <a href="/app" target="_blank" className={styles.ctaPrimary}>

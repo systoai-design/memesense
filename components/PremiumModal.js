@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import styles from '@/app/app/page.module.css'; // Reuse existing styles or inline
+import styles from '@/app/app/page.module.css';
 
-const ADMIN_WALLET = '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ'; // Hardcoded fallback or passed as prop
+const ADMIN_WALLET = '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
 const PRICE_SOL = 5;
 const DEV_WALLETS = [
     'HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11',
@@ -14,18 +14,18 @@ const DEV_WALLETS = [
 
 export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState('idle'); // idle, signing, verifying, success, error, active
+    const [status, setStatus] = useState('idle');
     const [errorMessage, setErrorMessage] = useState(null);
-    const [plan, setPlan] = useState('lifetime'); // 'lifetime' | 'monthly'
+    const [plan, setPlan] = useState('lifetime');
 
     const PRICES = {
         monthly: 0.5,
         lifetime: 5
     };
 
-    // Check status on mount
     useEffect(() => {
         const checkStatus = async () => {
+            if (!walletAddress) return;
             try {
                 const res = await fetch('/api/user/login', {
                     method: 'POST',
@@ -34,21 +34,15 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 });
                 const data = await res.json();
                 if (data.success && data.user.tier === 'PREMIUM') {
-                    // Check if subscription has expired? (Backend should have downgraded them if expired, 
-                    // provided canUseAnalysis or login checks happen. Login endpoint usually just returns row.
-                    // We might need to check if we need to show "Renew" for monthly.)
-                    // For now, if tier is PREMIUM, we show Active.
                     setStatus('active');
                 }
             } catch (e) {
                 console.error("Failed to check status", e);
             }
         };
-        if (walletAddress) checkStatus();
+        checkStatus();
     }, [walletAddress]);
 
-    // Dynamic Price Logic
-    // If dev wallet, price is 0.0001 REGARDLESS of plan (for testing both)
     const isDev = DEV_WALLETS.includes(walletAddress);
     const finalPrice = isDev ? 0.0001 : PRICES[plan];
 
@@ -64,7 +58,6 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
 
         try {
             // 1. Establish Connection
-            // Use local proxy with absolute URL
             const protocol = window.location.protocol;
             const host = window.location.host;
             const proxyUrl = `${protocol}//${host}/api/rpc`;
@@ -92,30 +85,23 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
 
             setStatus('verifying');
 
-            // 4. Poll for Confirmation (Robust Method)
+            // 4. Poll for Confirmation
             let confirmed = false;
             let retries = 0;
-            const maxRetries = 30; // 60 seconds total
-
-            setStatus('verifying'); // Status is already 'signing' before, now 'verifying' 
-            // Add note: 'Verifying... may take up to 1 min' handled by UI via status or generic text
+            const maxRetries = 30;
 
             while (!confirmed && retries < maxRetries) {
                 retries++;
                 const { value } = await connection.getSignatureStatus(signature);
-
                 if (value && (value.confirmationStatus === 'confirmed' || value.confirmationStatus === 'finalized')) {
                     confirmed = true;
                     console.log('Transaction confirmed:', value.confirmationStatus);
                     break;
                 }
-
-                // Wait 2 seconds
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
             if (!confirmed) {
-                // If timed out locally, we STILL verify with backend, as backend might be able to see it
                 console.warn('Local confirmation timed out, checking with backend anyway...');
             }
 

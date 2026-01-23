@@ -20,12 +20,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "MemeSense | AI-Powered Memecoin Analysis",
-  description: "Analyze pump.fun memecoins with AI. Get profitability predictions, holder analysis, and graduation probability powered by Gemini Vision.",
-  keywords: ["memecoin", "pump.fun", "crypto", "AI analysis", "trading", "solana"],
+  title: "MemeSense | AI-Powered Solana Token Analysis & Profit Tracker",
+  description: "Rank #1 for Solana Memecoin Analysis. Track wallet profits, analyze token risks, and spot gems with AI. Real-time data, copy-trading insights, and more.",
+  keywords: ["Solana", "Memecoin", "Token Analysis", "Profit Tracker", "AI Crypto", "Copy Trading", "Pump.fun", "Raydium"],
   openGraph: {
-    title: "MemeSense | AI-Powered Memecoin Analysis",
-    description: "Smart memecoin analysis powered by AI",
+    title: "MemeSense | AI-Powered Solana Token Analysis & Profit Tracker",
+    description: "Smart memecoin analysis powered by AI. Track profits and spot gems.",
     type: "website",
   },
 };
