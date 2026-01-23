@@ -368,7 +368,7 @@ export default function AnalyzePage() {
                 background: '#111'
             }}>
                 <iframe
-                    src={`https://dexscreener.com/solana/${ca}?embed=1&theme=dark&trades=0&info=0`}
+                    src={`https://dexscreener.com/solana/${token.pairAddress || ca}?embed=1&theme=dark&trades=0&info=0`}
                     width="100%"
                     height="450px"
                     style={{ border: 'none', display: 'block' }}
