@@ -301,6 +301,7 @@ export async function POST(request) {
                 ageFormatted: formatAge(ageHours),
                 // Platform
                 dexId: tokenData.dexId,
+                pairAddress: tokenData.pairAddress,
                 isPumpFun: tokenData.isPumpFun
             },
             metrics: {
