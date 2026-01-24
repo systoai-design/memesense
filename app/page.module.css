@@ -2205,7 +2205,159 @@
   }
 }
 
-/* ===== UPCOMING / ROADMAP SECTION ===== */
+/* ===== SHOWCASE SECTIONS (New Ecosystem Design) ===== */
+.showcaseSection {
+  padding: 100px 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.showcaseContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+.showcaseContainer.reverse {
+  flex-direction: row-reverse;
+}
+
+.showcaseVisual {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+}
+
+.showcaseContent {
+  flex: 1;
+  z-index: 20;
+}
+
+.showcaseBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(204, 255, 0, 0.1);
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  padding: 6px 16px;
+  border-radius: 100px;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.showcaseTitle {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.showcaseDesc {
+  font-size: 18px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.showcaseList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.showcaseListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.showcaseCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 100px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.showcaseCta:hover {
+  background: var(--primary);
+  color: #000;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--primary-glow);
+}
+
+/* Ambient Glows for Showcases */
+.showcaseGlow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  opacity: 0.15;
+  z-index: 1;
+  pointer-events: none;
+  filter: blur(60px);
+}
+
+.glowLeft {
+  left: -20%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.glowRight {
+  right: -20%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 768px) {
+  .showcaseSection {
+    padding: 60px 0;
+  }
+
+  .showcaseContainer {
+    flex-direction: column !important;
+    gap: 48px;
+    text-align: center;
+  }
+
+  .showcaseCta {
+    width: 100%;
+  }
+
+  .showcaseList {
+    align-items: center;
+    /* Center list items on mobile */
+  }
+
+  .showcaseTitle {
+    font-size: 32px;
+  }
+}
+
 .roadmapGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

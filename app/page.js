@@ -810,56 +810,94 @@ export default function Home() {
             </section>
 
             {/* ===== MOBILE SHOWCASE ===== */}
-            {/* ===== UPCOMING ECOSYSTEM ===== */}
-            <section className={styles.section}>
-                <Reveal className={styles.sectionHeader}>
-                    <div className={styles.sectionBadge}>
-                        <Rocket size={14} style={{ display: 'inline', marginRight: 6 }} />
-                        ROADMAP Q1 2026
-                    </div>
-                    <h2 className={styles.sectionTitle}>
-                        The MemeSense <span className={styles.heroTitleGradient}>Ecosystem</span>
-                    </h2>
-                    <p className={styles.sectionSubtitle}>
-                        Expanding your edge with tools that fit your workflow.
-                    </p>
-                </Reveal>
-
-                <div className={styles.roadmapGrid}>
-                    {/* Mobile App Card */}
-                    <Reveal className={styles.roadmapItem} delay={0}>
-                        <div className={styles.roadmapText}>
-                            <h3 className={styles.roadmapTitle}>Mobile App</h3>
-                            <p className={styles.roadmapDesc}>
-                                Your pocket terminal. Receive instant push notifications for whale movements, rug pulls, and trend alerts. Trade securely with biometric authentication.
-                            </p>
-                            <div className={styles.roadmapList}>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Instant Push Alerts</div>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Biometric Security</div>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> One-tap Quick Sense</div>
-                            </div>
-                        </div>
-                        <div className={styles.roadmapVisual}>
-                            <PhoneMockup />
-                        </div>
+            {/* ===== MOBILE APP SHOWCASE ===== */}
+            <section className={styles.showcaseSection}>
+                <div className={`${styles.showcaseGlow} ${styles.glowLeft}`}></div>
+                <div className={styles.showcaseContainer}>
+                    {/* Visual Left */}
+                    <Reveal className={styles.showcaseVisual} delay={0}>
+                        <PhoneMockup />
                     </Reveal>
 
-                    {/* Extension Card */}
-                    <Reveal className={styles.roadmapItem} delay={200}>
-                        <div className={styles.roadmapText}>
-                            <h3 className={styles.roadmapTitle}>Live Sense Extension</h3>
-                            <p className={styles.roadmapDesc}>
-                                The "God Mode" for Pump.fun. Overlay real-time safety scores, developer history, and social sentiment directly on the interface.
-                            </p>
-                            <div className={styles.roadmapList}>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Live Overlay HUD</div>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Auto-Rug Detection</div>
-                                <div className={styles.signalItem}><Check size={16} color="#CCFF00" /> Tweet Volume Correlation</div>
+                    {/* Content Right */}
+                    <Reveal className={styles.showcaseContent} delay={200}>
+                        <div className={styles.showcaseBadge}>
+                            <Smartphone size={14} style={{ marginRight: 6 }} />
+                            Mobile App
+                        </div>
+                        <h2 className={styles.showcaseTitle}>
+                            Your Pocket <br />
+                            <span className={styles.heroTitleGradient}>War Room</span>
+                        </h2>
+                        <p className={styles.showcaseDesc}>
+                            Never miss a pump again. MemeSense Mobile keeps you connected to the pulse of Solana with instant push alerts for whale movements, rug pulls, and trending tokens.
+                        </p>
+                        <div className={styles.showcaseList}>
+                            <div className={styles.showcaseListItem}>
+                                <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                                    <Zap size={14} />
+                                </div>
+                                Instant Whale Push Alerts
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                                    <Lock size={14} />
+                                </div>
+                                Biometric Security (FaceID)
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                                    <Rocket size={14} />
+                                </div>
+                                One-Tap Quick Sense
                             </div>
                         </div>
-                        <div className={styles.roadmapVisual}>
-                            <BrowserMockup />
+                        <a href="#" className={styles.showcaseCta}>
+                            Join Beta Waitlist
+                        </a>
+                    </Reveal>
+                </div>
+            </section>
+
+            {/* ===== LIVE SENSE EXTENSION SHOWCASE ===== */}
+            <section className={styles.showcaseSection} style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className={`${styles.showcaseGlow} ${styles.glowRight}`}></div>
+                <div className={`${styles.showcaseContainer} ${styles.reverse}`}>
+                    {/* Visual Right (in DOM order, but reversed via CSS) */}
+                    <Reveal className={styles.showcaseVisual} delay={200}>
+                        <BrowserMockup />
+                    </Reveal>
+
+                    {/* Content Left */}
+                    <Reveal className={styles.showcaseContent} delay={0}>
+                        <div className={styles.showcaseBadge}>
+                            <Sparkles size={14} style={{ marginRight: 6 }} />
+                            Chrome Extension
                         </div>
+                        <h2 className={styles.showcaseTitle}>
+                            God Mode for <br />
+                            <span className={styles.heroTitleGradient}>Pump.fun</span>
+                        </h2>
+                        <p className={styles.showcaseDesc}>
+                            Stop alt-tabbing to check safety. The Live Sense Extension overlays real-time safety scores, developer history, and social sentiment directly on the Pump.fun interface.
+                        </p>
+                        <div className={styles.showcaseList}>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Real-time Overlay HUD
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Auto-Rug Detection
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Tweet Volume Correlation
+                            </div>
+                        </div>
+                        <a href="#" className={styles.showcaseCta}>
+                            Add to Chrome
+                        </a>
                     </Reveal>
                 </div>
             </section>
