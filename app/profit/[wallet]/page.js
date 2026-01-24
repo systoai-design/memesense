@@ -261,7 +261,7 @@ export default function ProfitPage() {
                 </div>
 
                 <div className={styles.headerRight}>
-                    {!isWalletConnected ? (
+                    {!isWalletConnected && (
                         <button
                             onClick={connectWallet}
                             className={styles.scanBtn}
@@ -273,23 +273,6 @@ export default function ProfitPage() {
                         >
                             <Wallet size={16} /> Connect
                         </button>
-                    ) : (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginRight: 12,
-                            background: 'rgba(0, 212, 126, 0.1)',
-                            border: '1px solid #00d47e',
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            fontSize: 13,
-                            color: '#00d47e',
-                            fontWeight: 700
-                        }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00d47e' }} />
-                            {connectedWallet?.slice(0, 4)}...{connectedWallet?.slice(-4)}
-                        </div>
                     )}
 
                     <form onSubmit={handleSearch} className={styles.searchForm}>
