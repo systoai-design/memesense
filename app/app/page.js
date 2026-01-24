@@ -23,6 +23,20 @@ export default function AppHome() {
 
     const [userTier, setUserTier] = useState('FREE');
 
+    const getProvider = () => {
+        if ('phantom' in window) {
+            const provider = window.phantom?.solana;
+            if (provider?.isPhantom) {
+                return provider;
+            }
+        }
+        // Fallback to window.solana if generic
+        if ('solana' in window && window.solana.isPhantom) {
+            return window.solana;
+        }
+        return null;
+    };
+
     const handleLogin = useCallback(async (address) => {
         setWalletAddress(address);
         localStorage.setItem('memesense_wallet', address);
@@ -81,10 +95,12 @@ export default function AppHome() {
     // Initial Auth Check
     useEffect(() => {
         const checkWallet = async () => {
-            if (window.solana && window.solana.isPhantom) {
+            const provider = getProvider();
+
+            if (provider) {
                 try {
                     // Check if already connected
-                    const resp = await window.solana.connect({ onlyIfTrusted: true });
+                    const resp = await provider.connect({ onlyIfTrusted: true });
                     handleLogin(resp.publicKey.toString());
                 } catch (err) {
                     // Not connected, show modal
@@ -104,13 +120,15 @@ export default function AppHome() {
     const handleConnect = async () => {
         if (isConnecting) return;
 
-        if (window.solana && window.solana.isPhantom) {
+        const provider = getProvider();
+
+        if (provider) {
             setIsConnecting(true);
             try {
                 // Force a small delay to clear any pending extension states
                 await new Promise(r => setTimeout(r, 100));
 
-                const resp = await window.solana.connect();
+                const resp = await provider.connect();
                 handleLogin(resp.publicKey.toString());
             } catch (err) {
                 console.error("Connection failed", err);
@@ -137,8 +155,9 @@ export default function AppHome() {
 
     const handleDisconnect = async () => {
         try {
-            if (window.solana) {
-                await window.solana.disconnect();
+            const provider = getProvider();
+            if (provider) {
+                await provider.disconnect();
             }
         } catch (err) {
             console.error("Disconnect error:", err);
