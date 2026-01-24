@@ -18,6 +18,7 @@ export default function ProfitPage() {
     // Wallet Connection State
     const [connectedWallet, setConnectedWallet] = useState(null);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
+    const [isWalletChecking, setIsWalletChecking] = useState(true); // New state to pause analysis until check done
 
     const getProvider = () => {
         if ('phantom' in window) {
@@ -39,6 +40,9 @@ export default function ProfitPage() {
                 })
                 .catch(() => {
                     // Not connected
+                })
+                .finally(() => {
+                    setIsWalletChecking(false); // Check complete
                 });
 
             provider.on("connect", (publicKey) => {
@@ -50,6 +54,8 @@ export default function ProfitPage() {
                 setConnectedWallet(null);
                 setIsWalletConnected(false);
             });
+        } else {
+            setIsWalletChecking(false); // No provider, check done
         }
     }, []);
 
@@ -95,10 +101,10 @@ export default function ProfitPage() {
     const [timeWindow, setTimeWindow] = useState('7d'); // Default to 7d
 
     useEffect(() => {
-        if (walletToAnalyze) {
+        if (walletToAnalyze && !isWalletChecking) {
             analyzeWallet(walletToAnalyze);
         }
-    }, [walletToAnalyze, connectedWallet]); // Re-run if connected wallet changes (might unlock premium)
+    }, [walletToAnalyze, connectedWallet, isWalletChecking]); // Re-run if connected wallet changes (might unlock premium)
 
     async function analyzeWallet(address) {
         setLoading(true);
