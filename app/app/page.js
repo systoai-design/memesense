@@ -79,7 +79,11 @@ export default function AppHome() {
                 const res = await fetch('/api/scans/recent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId, walletAddress })
+                    body: JSON.stringify({
+                        deviceId,
+                        walletAddress,
+                        type: mode // 'token' or 'wallet'
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -90,7 +94,7 @@ export default function AppHome() {
             }
         };
         fetchRecent();
-    }, [walletAddress]);
+    }, [walletAddress, mode]);
 
     // Initial Auth Check
     useEffect(() => {
@@ -192,6 +196,33 @@ export default function AppHome() {
             </div>
         );
     }
+
+    const handleRename = async (e, scan, newName) => {
+        e.stopPropagation(); // Prevent navigation
+        // Optimistic update
+        const oldName = scan.user_label || scan.name;
+        const updatedScans = recentScans.map(s =>
+            s.token_address === scan.token_address ? { ...s, user_label: newName } : s
+        );
+        setRecentScans(updatedScans);
+
+        try {
+            const deviceId = localStorage.getItem('memesense_device_id');
+            await fetch('/api/user/label', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    deviceId,
+                    walletAddress,
+                    targetWallet: scan.token_address,
+                    label: newName
+                })
+            });
+        } catch (err) {
+            console.error("Failed to rename", err);
+            // Revert on error could go here
+        }
+    };
 
     return (
         <div className={styles.container}>
@@ -363,26 +394,59 @@ export default function AppHome() {
                     <div className={styles.recentGrid}>
                         {recentScans.length === 0 ? (
                             <div style={{ color: '#888', gridColumn: '1/-1', textAlign: 'center', padding: '20px' }}>
-                                No recent activity yet. Be the first!
+                                {mode === 'token' ? 'No recent tokens scanned.' : 'No profit tracks yet.'}
                             </div>
                         ) : (
                             recentScans.map((scan, i) => (
                                 <div
                                     key={i}
                                     className={`${styles.scanCard} glass-card`}
-                                    onClick={() => router.push(`/analyze/${scan.token_address}`)}
-                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => router.push(mode === 'token'
+                                        ? `/analyze/${scan.token_address}`
+                                        : `/profit/${scan.token_address}`
+                                    )}
+                                    style={{ cursor: 'pointer', position: 'relative' }}
                                 >
                                     <div className={styles.tokenInfo}>
                                         <div className={styles.tokenIconPlaceholder}>
                                             {scan.image_url ? (
                                                 <img src={scan.image_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
-                                            ) : '🪙'}
+                                            ) : (
+                                                mode === 'token' ? '🪙' : '👤'
+                                            )}
                                         </div>
                                         <div>
-                                            <div className={styles.tokenName}>{scan.symbol || scan.name || 'Unknown'}</div>
+                                            <div className={styles.tokenName} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                {scan.user_label || scan.name || (mode === 'token' ? 'Unknown' : 'Wallet')}
+                                                {mode === 'wallet' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const currentName = scan.user_label || scan.name || '';
+                                                            const newName = prompt('Name this wallet:', currentName);
+                                                            if (newName) handleRename(e, scan, newName);
+                                                        }}
+                                                        className={styles.editBtn}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            padding: 2,
+                                                            opacity: 0.6
+                                                        }}
+                                                        title="Rename Wallet"
+                                                    >
+                                                        <Pencil size={12} color="#fff" />
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className={styles.tokenDate}>
-                                                {new Date(scan.created_at.replace(' ', 'T') + 'Z').toLocaleDateString()} • {Math.max(0, Math.round((Date.now() - new Date(scan.created_at.replace(' ', 'T') + 'Z')) / 60000))}m ago
+                                                {mode === 'wallet'
+                                                    ? `${scan.token_address.slice(0, 4)}...${scan.token_address.slice(-4)}`
+                                                    : (scan.symbol || 'SOL')
+                                                }
+                                                <span style={{ margin: '0 6px', opacity: 0.5 }}>•</span>
+                                                {Math.max(0, Math.round((Date.now() - new Date(scan.created_at.replace(' ', 'T') + 'Z')) / 60000))}m ago
                                             </div>
                                         </div>
                                     </div>

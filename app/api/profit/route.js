@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis, recordUsage } from '@/lib/db';
+import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
 import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
@@ -172,6 +172,16 @@ export async function POST(request) {
             metrics.totalUnrealizedPnL = totalUnrealizedPnL;
             metrics.totalUnrealizedPnLUSD = totalUnrealizedPnL * solPrice;
         });
+
+        // Record Scan History
+        if (!isAdmin && deviceId !== 'demo-landing') {
+            await recordScan(user.id, {
+                address: walletToAnalyze,
+                name: 'Wallet', // Default name, user can label it later
+                symbol: 'SOL',
+                imageUrl: null
+            }, 'wallet');
+        }
 
         return NextResponse.json({
             success: true,
