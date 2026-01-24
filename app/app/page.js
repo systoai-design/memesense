@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import PremiumModal from '@/components/PremiumModal';
 import BetaBadge from '@/components/BetaBadge';
+import {
+    ArrowLeft, Lock, TrendingUp, Clock, DollarSign, Activity,
+    Wallet, ChevronLeft, ChevronRight, Copy, Search, BarChart3,
+    LineChart, Brain, Check, Zap, Pencil
+} from 'lucide-react';
 
 // Components
 // import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
