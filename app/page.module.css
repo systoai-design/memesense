@@ -160,6 +160,14 @@
   }
 }
 
+
+/* Landing Page Navigation */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
 .navLink {
   color: var(--text-secondary);
   font-size: 15px;
