@@ -141,10 +141,7 @@
   /* Allow groups to take space */
 }
 
-/* Center Navigation Group (Desktop Only) */
-.navCenter {
-  justify-content: center;
-}
+
 
 /* Right Navigation Group */
 .navRight {

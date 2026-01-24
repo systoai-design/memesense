@@ -267,19 +267,7 @@ export default function AppHome() {
                     </a>
                 </div>
 
-                {/* Center Group - Wallet Address (Hidden on Mobile) */}
-                <div className={`${styles.navGroup} ${styles.navCenter}`}>
-                    {walletAddress && (
-                        <button
-                            onClick={() => router.push('/profile')}
-                            className={`${styles.walletButton} btn btn-secondary`}
-                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', marginRight: 4 }}></span>
-                            {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
-                        </button>
-                    )}
-                </div>
+
 
                 <div className={`${styles.navGroup} ${styles.navRight}`}>
                     {/* User Tier Status Badge */}
