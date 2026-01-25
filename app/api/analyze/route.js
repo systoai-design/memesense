@@ -395,8 +395,9 @@ export async function POST(request) {
             chart: [],
             user: {
                 tier: user.tier,
-                remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
-                remainingTrial: user.tier === 'free' ? (user.trialStatus?.remaining || 0) : 'unlimited',
+                remainingToday: usageCheck.remainingToday,
+                usedToday: usageCheck.usedToday,
+                dailyLimit: usageCheck.dailyLimit,
                 credits: user.credits
             },
             timestamp: new Date().toISOString(),

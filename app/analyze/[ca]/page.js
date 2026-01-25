@@ -112,6 +112,7 @@ export default function AnalyzePage() {
                         // Update Analysis & Entry Point (Unlocked)
                         analysis: result.analysis,
                         entryPoint: result.entryPoint,
+                        user: result.user, // Ensure scan limits/usage stay live
                         timestamp: new Date().toISOString()
                     };
                 });
@@ -322,7 +323,7 @@ export default function AnalyzePage() {
                         </span>
                         {user.tier === 'FREE' && (
                             <span className={styles.trialRemaining}>
-                                ⚡ {user.remainingToday}/10 FREE SCAN(S)
+                                ⚡ {user.usedToday || 0}/{user.dailyLimit || 10} FREE SCAN(S)
                             </span>
                         )}
                         {user.tier === 'TRIAL' && (

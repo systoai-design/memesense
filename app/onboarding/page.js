@@ -183,7 +183,7 @@ export default function Onboarding() {
                         }}>
                             <h3 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '18px' }}>Standard</h3>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: '0 0 16px 0' }}>
-                                Basic access with 5 scans per day. Good for casual checking.
+                                Basic access with 10 scans per day. Good for casual checking.
                             </p>
                             <button className={`${styles.button} ${styles.buttonSecondary}`} onClick={handleFreeTier} disabled={loading}>
                                 Continue as Free User
