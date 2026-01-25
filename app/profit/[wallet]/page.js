@@ -76,8 +76,9 @@ export default function ProfitPage() {
 
             if (isMobile) {
                 const currentUrl = window.location.href;
-                const deepLink = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(currentUrl)}`;
-                window.location.href = deepLink;
+                const ref = window.location.origin;
+                const deepLink = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(ref)}`;
+                window.open(deepLink, '_blank');
             } else {
                 window.open('https://phantom.app/', '_blank');
             }
