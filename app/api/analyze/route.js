@@ -264,20 +264,18 @@ export async function POST(request) {
             };
         }
 
-        // Record Usage
+        // Record Usage (Billed only on fresh scans)
         if (!skipUsageRecord && !isCacheValid) {
-            // Only charge credit if we actually ran a fresh analysis (cache miss)
-            // or maybe charge every time but lower cost? For now, charge every time 
-            // because "usage" implies viewing the data. 
-            // Actually, cost is high. Let's record usage every time for history, but maybe limits should be credit based?
-            // Keeping existing logic: recordUsage logs to DB.
             await recordUsage(user.id, ca);
-            // Also record scan for history
-            try {
-                await recordScan(user.id, {
-                    address: ca, name: tokenData.name, symbol: tokenData.symbol, imageUrl: tokenData.imageUrl
-                });
-            } catch (e) { }
+        }
+
+        // Always record/update scan history for the user
+        try {
+            await recordScan(user.id, {
+                address: ca, name: tokenData.name, symbol: tokenData.symbol, imageUrl: tokenData.imageUrl
+            });
+        } catch (e) {
+            console.error('Scan history recording failed:', e);
         }
 
 
