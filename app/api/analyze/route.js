@@ -166,8 +166,29 @@ export async function POST(request) {
         if (isCacheValid && cachedEntry.aiAnalysis) {
             aiAnalysis = cachedEntry.aiAnalysis;
         } else {
-            // Only run AI if cache is invalid
-            const uniqueBuyersCount = 0;
+            // Calculate Strict Alpha Metrics (JS-Side Verification)
+            const liqRatio = tokenData.marketCap > 0 ? (tokenData.liquidity / tokenData.marketCap) : 0;
+            const pressure5m = (tokenData.buyCount5m + tokenData.sellCount5m) > 0
+                ? (tokenData.buyCount5m / (tokenData.buyCount5m + tokenData.sellCount5m))
+                : 0.5;
+            const sniperExitRatio = sniperData.totalSnipers > 0
+                ? (sniperData.snipersSold / sniperData.totalSnipers)
+                : 1;
+
+            const alphaMetrics = {
+                liqRatio: liqRatio.toFixed(3),
+                liqStatus: liqRatio < 0.10 ? 'CRITICAL_RISK' : liqRatio > 0.20 ? 'HEALTHY' : 'THIN',
+                concentration: holderData.top10HoldersPercent,
+                concentrationStatus: holderData.top10HoldersPercent > 50 ? 'DANGEROUS' : holderData.top10HoldersPercent > 30 ? 'RISK' : 'SAFE',
+                pressure5m: (pressure5m * 100).toFixed(1),
+                pressureStatus: pressure5m > 0.60 ? 'BULLISH' : pressure5m < 0.40 ? 'BEARISH' : 'NEUTRAL',
+                sniperStatus: sniperExitRatio > 0.50 ? 'CLEANED' : sniperExitRatio < 0.20 ? 'DUMP_RISK' : 'NEUTRAL',
+                snipersSold: sniperData.snipersSold || 0,
+                totalSnipers: sniperData.totalSnipers || 0
+            };
+
+            const uniqueBuyersCount = 0; // Placeholder until real data is available
+
             const analysisInput = {
                 ...tokenData,
                 holders: holderData.totalHolders,
@@ -177,7 +198,8 @@ export async function POST(request) {
                 bondingVelocity: bondingVelocity.toFixed(4),
                 organicScore: organicScore.toFixed(2),
                 isWinningProfile,
-                ageHours
+                ageHours,
+                alphaMetrics // Pass strict metrics to AI
             };
 
             try {

@@ -473,42 +473,82 @@ export default function AnalyzePage() {
                     {/* 1. Profit Probability Card (HERO) */}
                     <section className={`card ${styles.profitCard}`}>
                         <h2>Profit Probability</h2>
-                        <ProfitabilityGauge
-                            value={analysis.profitProbability}
-                            recommendation={analysis.recommendation}
-                        />
-                        <div className={styles.verdict}>
-                            <div className={`${styles.recommendation} ${getRecommendationClass(analysis.recommendation)}`}>
-                                {analysis.recommendation}
+
+                        {/* SPLIT LAYOUT: Gauge + Key Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '16px' }}>
+                            {/* Left: Gauge */}
+                            <div style={{ flex: '1', display: 'flex', justifyContent: 'center' }}>
+                                <ProfitabilityGauge
+                                    value={analysis.profitProbability}
+                                    recommendation={analysis.recommendation}
+                                />
                             </div>
-                            <div className={styles.confidence}>
-                                Confidence: <strong>{analysis.confidence}</strong>
+
+                            {/* Right: Verdict Stack */}
+                            <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+                                <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                                    AI Verdict
+                                </div>
+                                <div className={`${styles.recommendation} ${getRecommendationClass(analysis.recommendation)}`}
+                                    style={{ fontSize: '1.8rem', margin: '0', padding: '6px 16px', alignSelf: 'stretch', textAlign: 'center' }}>
+                                    {analysis.recommendation}
+                                </div>
+                                <div className={`${styles.riskBadge} ${getRiskClass(analysis.riskLevel)}`}
+                                    style={{ margin: '0', fontSize: '0.75rem', alignSelf: 'stretch', textAlign: 'center' }}>
+                                    Risk: {analysis.riskLevel}
+                                </div>
+                                <div className={styles.confidence} style={{ margin: '0', fontSize: '0.8rem' }}>
+                                    Confidence: <strong>{analysis.confidence}</strong>
+                                </div>
                             </div>
                         </div>
 
+                        {/* RUG ACTIVITIES (Compact) */}
+                        {data.rugRisk?.signals?.length > 0 && (
+                            <div style={{
+                                marginTop: '0',
+                                marginBottom: '12px',
+                                padding: '10px 12px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 'bold', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                                    <AlertTriangle size={14} /> Rug Risks Detected
+                                </div>
+                                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.75rem', color: '#fca5a5', lineHeight: '1.4' }}>
+                                    {data.rugRisk.signals.map((signal, i) => (
+                                        <li key={i}>{signal}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {/* Snapshot Warning */}
                         <div style={{
-                            marginTop: '16px',
-                            padding: '8px 12px',
+                            padding: '6px 10px',
                             background: 'rgba(34, 197, 94, 0.05)',
                             border: '1px solid rgba(34, 197, 94, 0.15)',
-                            borderRadius: '8px',
-                            fontSize: '0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.7rem',
                             color: '#4ade80',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px'
                         }}>
-                            <div className={styles.liveDot} style={{ background: '#4ade80', boxShadow: '0 0 8px rgba(74, 222, 128, 0.4)' }}></div>
+                            <div className={styles.liveDot} style={{ background: '#4ade80', width: '6px', height: '6px', boxShadow: '0 0 8px rgba(74, 222, 128, 0.4)' }}></div>
                             <span>
-                                <strong>AI Analysis Live:</strong> Updating automatically based on price action.
+                                <strong>AI Live:</strong> Updates on price action.
                             </span>
                         </div>
 
-                        {/* NEW: Trade Setup Card */}
+                        {/* Trade Setup Card */}
                         {data.entryPoint && (
                             <div style={{
-                                marginTop: '20px',
+                                marginTop: '16px',
                                 padding: '16px',
                                 borderRadius: '12px',
                                 background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
@@ -634,10 +674,6 @@ export default function AnalyzePage() {
                                 </div>
                             </div>
                         )}
-
-                        <div className={`${styles.riskBadge} ${getRiskClass(analysis.riskLevel)}`}>
-                            Risk Level: {analysis.riskLevel}
-                        </div>
                     </section>
 
                     {/* 2. Key Metrics Card */}
@@ -710,7 +746,7 @@ export default function AnalyzePage() {
                     <section className={`card ${styles.profitCard}`} style={{ padding: '24px', textAlign: 'left', position: 'relative', overflow: 'hidden' }}>
 
                         {/* Premium Gate Overlay */}
-                        {user.tier === 'FREE' && (
+                        {!['PREMIUM', 'TRIAL', 'Premium Trial'].includes(user.tier) && (
                             <div style={{
                                 position: 'absolute',
                                 top: 0,
@@ -749,7 +785,7 @@ export default function AnalyzePage() {
                                 <span style={{ fontSize: '1.2rem' }}><Bot size={24} color="var(--primary)" /></span>
                                 <h2 style={{ textAlign: 'left', margin: 0, fontSize: '1.1rem' }}>Whale & Dev Analysis</h2>
                             </div>
-                            {user.tier === 'PREMIUM' ? (
+                            {['PREMIUM', 'TRIAL', 'Premium Trial'].includes(user.tier) ? (
                                 <span style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px', color: '#ccff00', opacity: 0.9 }}>
                                     PREMIUM UNLOCKED
                                 </span>
@@ -912,7 +948,7 @@ export default function AnalyzePage() {
                         </div>
 
                         <ul className={styles.holdersList}>
-                            {(holders.topHolders || []).slice(0, user.tier === 'PREMIUM' ? 10 : 5).map((holder, i) => (
+                            {(holders.topHolders || []).slice(0, 10).map((holder, i) => (
                                 <li key={i} className={styles.holderItem}>
                                     <span className={styles.holderRank}>#{i + 1}</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -932,16 +968,7 @@ export default function AnalyzePage() {
                                 </li>
                             ))}
                         </ul>
-                        {user.tier === 'FREE' && (
-                            <div style={{ textAlign: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                <button
-                                    onClick={() => setShowPremiumModal(true)}
-                                    style={{ background: 'transparent', border: 'none', color: '#ccff00', cursor: 'pointer', fontSize: '0.85rem' }}
-                                >
-                                    View Top 10 Holders &rarr;
-                                </button>
-                            </div>
-                        )}
+
                     </section>
 
                     {/* Rug Check */}
@@ -985,30 +1012,88 @@ export default function AnalyzePage() {
             }
 
             {/* AI Insights */}
-            <section className={`card ${styles.insightsCard}`}>
+            <section className={`card ${styles.insightsCard}`} style={{ position: 'relative', overflow: 'hidden' }}>
+
+                {/* Premium Gate Overlay for Alpha Engine */}
+                {!['PREMIUM', 'TRIAL', 'Premium Trial'].includes(user.tier) && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 10,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        border: '1px solid rgba(204, 255, 0, 0.2)'
+                    }}>
+                        <Lock size={32} color="#ccff00" />
+                        <div style={{ textAlign: 'center' }}>
+                            <h3 style={{ margin: 0, color: '#fff' }}>Alpha Engine Locked</h3>
+                            <p style={{ margin: '4px 0 16px', color: '#888', fontSize: '0.9rem' }}>
+                                Upgrade to see the strict AI Analysis & Report
+                            </p>
+                            <button
+                                onClick={() => setShowPremiumModal(true)}
+                                className="btn btn-primary"
+                                style={{ padding: '8px 24px' }}
+                            >
+                                Unlock Alpha Engine
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <h2>🤖 Alpha Engine Analysis</h2>
 
-                {/* Verdict */}
-                <div className={styles.verdict}>
-                    <p className={styles.verdictText}>{analysis.verdict || analysis.summary}</p>
-                    <span className={styles.confidenceTag}>Confidence: {analysis.confidence}</span>
-                </div>
+                {analysis.alphaReport ? (
+                    /* Strict Alpha Engine Terminal Output */
+                    <div style={{
+                        background: '#0d1117',
+                        border: '1px solid #30363d',
+                        borderRadius: '6px',
+                        padding: '16px',
+                        fontFamily: 'Consolas, Monaco, "Andale Mono", monospace',
+                        fontSize: '0.85rem',
+                        color: '#c9d1d9',
+                        overflowX: 'auto',
+                        lineHeight: '1.5',
+                        whiteSpace: 'pre-wrap',
+                        marginTop: '12px'
+                    }}>
+                        {analysis.alphaReport}
+                    </div>
+                ) : (
+                    /* Legacy Output Fallback */
+                    <>
+                        {/* Verdict */}
+                        <div className={styles.verdict}>
+                            <p className={styles.verdictText}>{analysis.verdict || analysis.summary}</p>
+                            <span className={styles.confidenceTag}>Confidence: {analysis.confidence}</span>
+                        </div>
 
-                {/* Key Signals */}
-                <div className={styles.insights}>
-                    <h3>Key Signals</h3>
-                    <ul className={styles.signalsList}>
-                        {analysis.keyInsights?.map((insight, i) => (
-                            <li key={i} className={
-                                insight.startsWith('🟢') ? styles.bullish :
-                                    insight.startsWith('🔴') ? styles.bearish :
-                                        styles.warning
-                            }>
-                                {insight}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                        {/* Key Signals */}
+                        <div className={styles.insights}>
+                            <h3>Key Signals</h3>
+                            <ul className={styles.signalsList}>
+                                {analysis.keyInsights?.map((insight, i) => (
+                                    <li key={i} className={
+                                        insight.startsWith('🟢') ? styles.bullish :
+                                            insight.startsWith('🔴') ? styles.bearish :
+                                                styles.warning
+                                    }>
+                                        {insight}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </>
+                )}
 
                 {/* Warning Flags */}
                 {analysis.warningFlags?.length > 0 && (
