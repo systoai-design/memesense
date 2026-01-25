@@ -432,23 +432,48 @@ export async function POST(request) {
             timestamp: new Date().toISOString()
         };
 
-        // SYNC LOGIC: Fix contradictions between Profit Probability and Entry Point
-        if (response.entryPoint.shouldEnter) {
+        // SYNC LOGIC: Resolve conflicts between AI Probability and Entry Point Algorithm
+        // HIERARCHY: Safety > High Confidence AI > Standard Metrics
+
+        // 1. If AI is extremely confident (>85%), it overrides conservative technical wait signals
+        if (aiAnalysis && aiAnalysis.profitProbability > 85 && !deadCoinStatus.isDead && rugStatus.riskLevel !== 'CRITICAL') {
+            console.log('HIGH CONFIDENCE OVERRIDE: AI Probability > 85%, Forcing BUY');
+
+            // Force BUY recommendations
+            aiAnalysis.recommendation = 'BUY';
+            response.entryPoint.verdict = 'ENTER NOW';
+            response.entryPoint.shouldEnter = true;
+
+            // Set Target Mcap to CURRENT (Don't wait for dip)
+            response.entryPoint.targetMcap = tokenData.marketCap;
+            response.entryPoint.score = Math.max(response.entryPoint.score, 9); // Ensure high score
+
+            // Adjust Risk if it was artificially high due to missing signals
+            if (response.analysis.riskLevel === 'HIGH' && rugStatus.riskLevel === 'LOW') {
+                response.analysis.riskLevel = 'MEDIUM'; // Downgrade risk if only technicals were weak
+            }
+        }
+
+        // 2. Standard Sync: If Entry says ENTER but Analysis says WAIT
+        else if (response.entryPoint.shouldEnter) {
             if (response.analysis.recommendation !== 'BUY') {
-                // If Entry says ENTER but Analysis says WAIT
-                if (response.analysis.profitProbability > 50) {
-                    response.analysis.recommendation = 'BUY'; // Upgrade Analysis
+                if (response.analysis.profitProbability > 60) {
+                    response.analysis.recommendation = 'BUY'; // Upgrade Analysis to match Technicals
                 } else {
-                    response.entryPoint.verdict = 'WAIT FOR MOMENTUM'; // Downgrade Entry
+                    response.entryPoint.verdict = 'WAIT FOR MOMENTUM'; // Downgrade Entry to match AI caution
                     response.entryPoint.shouldEnter = false;
                 }
             }
         }
 
-        // If Profit is extremely high (>80) but Entry says WAIT, trust Entry (metrics logic is stricter)
-        if (response.analysis.profitProbability > 80 && !response.entryPoint.shouldEnter) {
-            // Keep Analysis as is (it's probabilistic), but Entry advice prevails for action
+        // 3. Ensure Target Market Cap is NEVER null
+        if (!response.entryPoint.targetMcap) {
+            response.entryPoint.targetMcap = tokenData.marketCap;
         }
+
+        // 4. Update Analysis Object in Response
+        response.analysis.recommendation = aiAnalysis ? aiAnalysis.recommendation : response.analysis.recommendation;
+        response.analysis.riskLevel = aiAnalysis ? aiAnalysis.riskLevel : response.analysis.riskLevel;
 
 
         return NextResponse.json(response);
@@ -671,17 +696,32 @@ function calculateEntryPoint(tokenData, bondingData, holderData, organicScore, i
     let verdict = 'WAIT';
     let shouldEnter = false;
 
+    // SCORING ADJUSTMENT:
+    // 8+ = Strong Buy
+    // 5-7 = Watch / Buy Dip
+    // <5 = Avoid / Wait
+
     if (score >= 8) {
         verdict = 'ENTER NOW';
         shouldEnter = true;
-        targetMcap = currentMcap;
+        targetMcap = currentMcap; // Buy Spot
     } else if (score >= 5) {
-        verdict = 'WATCH';
-        targetMcap = Math.round(currentMcap * 0.9); // Wait for 10% dip
+        // If Winning Profile, be more aggressive
+        if (isWinningProfile) {
+            verdict = 'ENTER (SMALL)';
+            shouldEnter = true;
+            targetMcap = currentMcap;
+        } else {
+            verdict = 'WATCH';
+            targetMcap = Math.round(currentMcap * 0.9); // Wait for 10% dip
+        }
     } else {
         verdict = 'AVOID / WAIT';
-        targetMcap = Math.round(currentMcap * 0.7); // Wait for 30% dip
-        if (trend === 'DUMPING') verdict = 'WAIT - FALLING';
+        targetMcap = Math.round(currentMcap * 0.75); // Wait for 25% dip
+        if (trend === 'DUMPING') {
+            verdict = 'WAIT - FALLING';
+            targetMcap = Math.round(currentMcap * 0.6); // Wait for 40% dip
+        }
     }
 
     // Fallback reasoning

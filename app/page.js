@@ -59,570 +59,6 @@ export default function Home() {
     const [isScrolled, setIsScrolled] = useState(false);
     // ... existing useEffect ...
 
-    return (
-        <div className={styles.page}>
-            {/* Interactive Components */}
-            {showWaitlist && <WaitlistModal onClose={() => setShowWaitlist(false)} />}
-            {showToast && <NotificationToast message={toastMessage} onClose={() => setShowToast(false)} />}
-
-            {/* ===== HEADER ===== */}
-// ... header remains same ...
-
-            {/* ===== HERO SECTION ===== */}
-// ... hero remains same ...
-
-            // ... (Inside the Mobile App Showcase Section)
-            <div className={styles.showcaseList}>
-                <div className={styles.showcaseListItem}>
-                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
-                        <Zap size={14} />
-                    </div>
-                    Instant Whale Push Alerts
-                </div>
-                <div className={styles.showcaseListItem}>
-                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
-                        <Lock size={14} />
-                    </div>
-                    Biometric Security (FaceID)
-                </div>
-                <div className={styles.showcaseListItem}>
-                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
-                        <Rocket size={14} />
-                    </div>
-                    One-Tap Quick Sense
-                </div>
-            </div>
-            <button onClick={handleJoinBeta} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
-                Join Beta Waitlist
-            </button>
-        </Reveal>
-                </div >
-            </section >
-
-        {/* ===== LIVE SENSE EXTENSION SHOWCASE ===== */ }
-        < section className = { styles.showcaseSection } style = {{ background: 'rgba(255,255,255,0.02)' }
-}>
-                <div className={`${styles.showcaseGlow} ${styles.glowRight}`}></div>
-                <div className={`${styles.showcaseContainer} ${styles.reverse}`}>
-                    {/* Visual Right (in DOM order, but reversed via CSS) */}
-                    <Reveal className={styles.showcaseVisual} delay={200}>
-                        <BrowserMockup />
-                    </Reveal>
-
-                    {/* Content Left */}
-                    <Reveal className={styles.showcaseContent} delay={0}>
-                        <div className={styles.showcaseBadge}>
-                            <Sparkles size={14} style={{ marginRight: 6 }} />
-                            Chrome Extension
-                        </div>
-                        <h2 className={styles.showcaseTitle}>
-                            God Mode for <br />
-                            <span className={styles.heroTitleGradient}>Pump.fun</span>
-                        </h2>
-                        <p className={styles.showcaseDesc}>
-                            Stop alt-tabbing to check safety. The Live Sense Extension overlays real-time safety scores, developer history, and social sentiment directly on the Pump.fun interface.
-                        </p>
-                        <div className={styles.showcaseList}>
-                            <div className={styles.showcaseListItem}>
-                                <Check size={20} color="#CCFF00" />
-                                Real-time Overlay HUD
-                            </div>
-                            <div className={styles.showcaseListItem}>
-                                <Check size={20} color="#CCFF00" />
-                                Auto-Rug Detection
-                            </div>
-                            <div className={styles.showcaseListItem}>
-                                <Check size={20} color="#CCFF00" />
-                                Tweet Volume Correlation
-                            </div>
-                        </div>
-                        <button onClick={handleAddToChrome} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
-                            Add to Chrome
-                        </button>
-                    </Reveal>
-                </div>
-            </section >
-
-// ===== SCROLL REVEAL HOOK =====
-const useScrollReveal = (threshold = 0.1) => {
-    const [isVisible, setIsVisible] = useState(false);
-    const ref = useRef(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsVisible(true);
-                }
-            },
-            { threshold }
-        );
-
-        const current = ref.current;
-        if (current) observer.observe(current);
-
-        return () => {
-            if (current) observer.unobserve(current);
-        };
-    }, [threshold]);
-
-    return [ref, isVisible];
-};
-
-// ===== REVEAL WRAPPER COMPONENT =====
-const Reveal = ({ children, delay = 0, className = '' }) => {
-    const [ref, isVisible] = useScrollReveal();
-    return (
-        <div
-            ref={ref}
-            className={`${styles.reveal} ${isVisible ? styles.revealed : ''} ${className}`}
-            style={{ transitionDelay: `${delay}ms` }}
-        >
-            {children}
-        </div>
-    );
-};
-
-// ===== CODED PHONE MOCKUP COMPONENT =====
-const PhoneMockup = () => {
-    return (
-        <div className={styles.phoneMockupWrapper}>
-            <div className={styles.phoneDevice}>
-                {/* Phone Frame */}
-                <div className={styles.phoneFrame}>
-                    {/* Notch */}
-                    <div className={styles.phoneNotch}>
-                        <div className={styles.phoneSpeaker}></div>
-                        <div className={styles.phoneCamera}></div>
-                    </div>
-
-                    {/* Screen Content */}
-                    <div className={styles.phoneScreen}>
-                        {/* Status Bar */}
-                        <div className={styles.phoneStatusBar}>
-                            <span>9:41</span>
-                            <div className={styles.phoneStatusIcons}>
-                                <span>5G</span>
-                                <span>100%</span>
-                            </div>
-                        </div>
-
-                        {/* App Header */}
-                        <div className={styles.phoneAppHeader}>
-                            <div className={styles.phoneAppLogo}>MS</div>
-                            <span className={styles.phoneAppTitle}>MemeSense</span>
-                        </div>
-
-                        {/* Token Card */}
-                        <div className={styles.phoneTokenCard}>
-                            <div className={styles.phoneTokenHeader}>
-                                <span className={styles.phoneTokenName}>$PEPE</span>
-                                <span className={styles.phoneTokenChange}>+420%</span>
-                            </div>
-                            <div className={styles.phoneChart}>
-                                <svg viewBox="0 0 100 40" className={styles.phoneChartSvg}>
-                                    <defs>
-                                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
-                                            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path
-                                        d="M0,35 Q15,30 25,28 T45,20 T65,12 T85,8 T100,5"
-                                        fill="none"
-                                        stroke="var(--primary)"
-                                        strokeWidth="2"
-                                    />
-                                    <path
-                                        d="M0,35 Q15,30 25,28 T45,20 T65,12 T85,8 T100,5 V40 H0 Z"
-                                        fill="url(#chartGrad)"
-                                    />
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* Signal Badge */}
-                        <div className={styles.phoneSignal}>
-                            <span className={styles.phoneSignalDot}></span>
-                            78% - BUY
-                        </div>
-
-                        {/* Notification */}
-                        <div className={styles.phoneNotification}>
-                            <span className={styles.phoneNotifIcon}>🐋</span>
-                            <div className={styles.phoneNotifText}>
-                                <strong>Whale Alert</strong>
-                                <span>50 SOL buy detected</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Side Buttons */}
-                <div className={styles.phoneSideButtons}>
-                    <div className={styles.phoneVolumeUp}></div>
-                    <div className={styles.phoneVolumeDown}></div>
-                </div>
-                <div className={styles.phonePowerButton}></div>
-            </div>
-        </div>
-    );
-};
-
-// ===== BROWSER MOCKUP COMPONENT =====
-const BrowserMockup = () => {
-    return (
-        <div className={styles.browserMockupWrapper}>
-            <div className={styles.browserWindow}>
-                {/* Browser Bar */}
-                <div className={styles.browserBar}>
-                    <div className={styles.browserDots}>
-                        <div className={styles.browserDot} style={{ background: '#ff5f56' }}></div>
-                        <div className={styles.browserDot} style={{ background: '#ffbd2e' }}></div>
-                        <div className={styles.browserDot} style={{ background: '#27c93f' }}></div>
-                    </div>
-                    <div className={styles.browserAddress}>
-                        pump.fun/coin/8xL...
-                    </div>
-                </div>
-
-                {/* Content */}
-                <div className={styles.browserContent}>
-                    {/* Simulated Pump Grid */}
-                    <div className={styles.pumpGrid}>
-                        {[...Array(9)].map((_, i) => (
-                            <div key={i} className={styles.pumpItem}></div>
-                        ))}
-                    </div>
-
-                    {/* Overlay */}
-                    <div className={styles.extensionOverlay}>
-                        <div className={styles.overlayHeader}>
-                            <div className={styles.overlayTitle}>
-                                <Sparkles size={12} /> MemeSense Overlay
-                            </div>
-                        </div>
-                        <div className={styles.overlayScore}>85/100</div>
-                        <div className={styles.overlayLabel}>Safety Score</div>
-
-                        <div className={styles.overlayStat}>
-                            <span style={{ color: '#888' }}>Dev History</span>
-                            <span style={{ color: '#ccff00' }}>CLEAN</span>
-                        </div>
-                        <div className={styles.overlayStat}>
-                            <span style={{ color: '#888' }}>Sniper</span>
-                            <span style={{ color: '#fff' }}>0%</span>
-                        </div>
-                        <div className={styles.overlayStat}>
-                            <span style={{ color: '#888' }}>Trend</span>
-                            <span style={{ color: '#ccff00' }}>Type II Buy</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ===== INTERACTIVE DEMO COMPONENT =====
-const DemoSection = () => {
-    const [input, setInput] = useState('');
-    const [mode, setMode] = useState('token'); // 'token' | 'wallet'
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState('');
-
-    const handleAnalyze = async (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
-
-        setLoading(true);
-        setError('');
-        setResult(null);
-
-        try {
-            // WALLET MODE
-            if (mode === 'wallet') {
-                const response = await fetch('/api/profit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ walletToAnalyze: input.trim(), deviceId: 'demo-landing' })
-                });
-                const data = await response.json();
-
-                if (data.success && data.data) {
-                    const payload = data.data;
-                    const metrics = payload.summary?.all || {};
-                    const ai = payload.aiVerdict || {};
-
-                    setResult({
-                        type: 'wallet',
-                        totalProfit: metrics.totalRealizedPnL || 0,
-                        winRate: metrics.winRate || 0,
-                        profitFactor: metrics.profitFactor || 0,
-                        realizedPnL: metrics.totalRealizedPnL || 0,
-                        trades: metrics.totalTrades || 0,
-                        verdict: ai.status || (metrics.totalRealizedPnL > 0 ? 'PROFITABLE' : 'UNPROFITABLE'),
-                        verdictColor: ai.score >= 50 ? '#CCFF00' : '#FF4444' // Simple logic, or extract from aiStatus
-                    });
-                } else {
-                    setError(data.error || 'Tracker analysis failed');
-                }
-            }
-            // TOKEN MODE
-            else {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ca: input.trim(), deviceId: 'demo-landing' })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    let verdict = 'WAIT';
-                    let verdictEmoji = '⏳';
-                    let verdictColor = '#FFB800';
-
-                    if (data.analysis?.recommendation === 'BUY' || data.analysis?.profitProbability > 60) {
-                        verdict = 'BUY';
-                        verdictEmoji = '🟢';
-                        verdictColor = '#CCFF00';
-                    } else if (data.analysis?.recommendation === 'AVOID' || data.analysis?.profitProbability < 30) {
-                        verdict = 'RUN';
-                        verdictEmoji = '🔴';
-                        verdictColor = '#FF4444';
-                    }
-
-                    setResult({
-                        type: 'token',
-                        token: data.token,
-                        verdict,
-                        verdictEmoji,
-                        verdictColor,
-                        probability: data.analysis?.profitProbability || 50,
-                        riskLevel: data.analysis?.riskLevel || 'MEDIUM',
-                        holders: data.holders?.total || 0,
-                        imageUrl: data.token?.imageUrl
-                    });
-                } else {
-                    setError(data.error || 'Sense analysis failed');
-                }
-            }
-        } catch (err) {
-            setError('Failed to connect. Try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <section id="demo" className={styles.section}>
-            <Reveal className={styles.sectionHeader}>
-                <span className={styles.sectionBadge}>🧪 TRY IT NOW</span>
-                <h2 className={styles.sectionTitle}>
-                    Free <span className={styles.heroTitleGradient}>Instant Demo</span>
-                </h2>
-                <p className={styles.sectionSubtitle}>
-                    {mode === 'token'
-                        ? 'Paste any Solana token address to get an instant verdict'
-                        : 'Paste a wallet address to sense its historical profitability'}
-                </p>
-            </Reveal>
-
-            <Reveal delay={100}>
-                <div className={styles.demoContainer}>
-                    {/* Tab Switcher */}
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
-                        <button
-                            onClick={() => { setMode('token'); setResult(null); setError(''); }}
-                            style={{
-                                background: mode === 'token' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
-                                color: mode === 'token' ? '#ccff00' : '#888',
-                                border: mode === 'token' ? '1px solid #ccff00' : '1px solid transparent',
-                                padding: '8px 24px',
-                                borderRadius: '100px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Token Sense
-                        </button>
-                        <button
-                            onClick={() => { setMode('wallet'); setResult(null); setError(''); }}
-                            style={{
-                                background: mode === 'wallet' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
-                                color: mode === 'wallet' ? '#ccff00' : '#888',
-                                border: mode === 'wallet' ? '1px solid #ccff00' : '1px solid transparent',
-                                padding: '8px 24px',
-                                borderRadius: '100px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Profit Tracker
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleAnalyze} className={styles.demoForm}>
-                        <div className={styles.demoInputWrapper}>
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder={mode === 'token' ? "Paste token contract address..." : "Paste wallet address..."}
-                                className={styles.demoInput}
-                                disabled={loading}
-                            />
-                            <button
-                                type="submit"
-                                className={styles.demoButton}
-                                disabled={loading || !input.trim()}
-                            >
-                                {loading ? (
-                                    <span className={styles.demoSpinner}></span>
-                                ) : (
-                                    'Sense'
-                                )}
-                            </button>
-                        </div>
-                    </form>
-
-                    {error && (
-                        <div className={styles.demoError}>
-                            ⚠️ {error}
-                        </div>
-                    )}
-
-                    {/* TOKEN RESULT */}
-                    {result && result.type === 'token' && (
-                        <div className={styles.demoResult}>
-                            <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
-                                <span className={styles.demoVerdictEmoji}>{result.verdictEmoji}</span>
-                                <span className={styles.demoVerdictText} style={{ color: result.verdictColor }}>
-                                    {result.verdict}
-                                </span>
-                            </div>
-
-                            <div className={styles.demoMetrics}>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Token</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {result.imageUrl ? (
-                                            <img
-                                                src={result.imageUrl}
-                                                alt={result.token?.symbol}
-                                                style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-                                                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: '24px', height: '24px', borderRadius: '50%',
-                                                background: 'linear-gradient(135deg, #666, #333)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: '10px', fontWeight: 'bold', color: '#fff',
-                                                border: '1px solid rgba(255,255,255,0.2)'
-                                            }}>
-                                                {result.token?.symbol?.[0] || '?'}
-                                            </div>
-                                        )}
-                                        {/* Fallback hidden by default, shown on error */}
-                                        <div className="fallback-icon" style={{
-                                            display: 'none', width: '24px', height: '24px', borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #666, #333)',
-                                            alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '10px', fontWeight: 'bold', color: '#fff',
-                                            border: '1px solid rgba(255,255,255,0.2)'
-                                        }}>
-                                            {result.token?.symbol?.[0] || '?'}
-                                        </div>
-
-                                        <span className={styles.demoMetricValue}>${result.token?.symbol || 'Unknown'}</span>
-                                    </div>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Profit Prob.</span>
-                                    <span className={styles.demoMetricValue}>{result.probability}%</span>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Risk</span>
-                                    <span className={styles.demoMetricValue}>{result.riskLevel}</span>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Holders</span>
-                                    <span className={styles.demoMetricValue}>{result.holders.toLocaleString()}</span>
-                                </div>
-                            </div>
-
-                            <a href={`/analyze/${input}`} className={styles.demoCta}>
-                                ✨ I Want Full Analysis
-                            </a>
-                        </div>
-                    )}
-
-                    {/* WALLET RESULT */}
-                    {result && result.type === 'wallet' && (
-                        <div className={styles.demoResult}>
-                            <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
-                                <span className={styles.demoVerdictEmoji}>{result.totalProfit > 0 ? '🚀' : '📉'}</span>
-                                <span className={styles.demoVerdictText} style={{ color: result.verdictColor }}>
-                                    {result.verdict}
-                                </span>
-                            </div>
-
-                            <div className={styles.demoMetrics}>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Profit Factor</span>
-                                    <span className={styles.demoMetricValue} style={{ color: result.profitFactor >= 2 ? '#CCFF00' : '#fff' }}>
-                                        {result.profitFactor.toFixed(2)}x
-                                    </span>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Total Profit</span>
-                                    <span className={styles.demoMetricValue} style={{ color: result.totalProfit >= 0 ? '#ccff00' : '#ff4444' }}>
-                                        {result.totalProfit.toFixed(2)} SOL
-                                    </span>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Win Rate</span>
-                                    <span className={styles.demoMetricValue}>{result.winRate}%</span>
-                                </div>
-                                <div className={styles.demoMetric}>
-                                    <span className={styles.demoMetricLabel}>Trades</span>
-                                    <span className={styles.demoMetricValue}>{result.trades}</span>
-                                </div>
-                            </div>
-
-                            <a href={`/profit/${input}`} className={styles.demoCta}>
-                                ✨ View Full History
-                            </a>
-                        </div>
-                    )}
-                </div>
-            </Reveal>
-        </section>
-    );
-};
-
-export default function Home() {
-    // Live stats counter
-    const [stats, setStats] = useState({ analyzed: 12847, rugs: 1423 });
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setStats(prev => ({
-                analyzed: prev.analyzed + Math.floor(Math.random() * 3),
-                rugs: prev.rugs + (Math.random() > 0.8 ? 1 : 0)
-            }));
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Scroll listener for dynamic header
-    const [isScrolled, setIsScrolled] = useState(false);
-
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 20) {
@@ -1120,6 +556,469 @@ export default function Home() {
                     © 2026 MemeSense. All rights reserved.
                 </div>
             </footer>
-        </div >
+        </div>
     );
 }
+
+// ===== SCROLL REVEAL HOOK =====
+const useScrollReveal = (threshold = 0.1) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                }
+            },
+            { threshold }
+        );
+
+        const current = ref.current;
+        if (current) observer.observe(current);
+
+        return () => {
+            if (current) observer.unobserve(current);
+        };
+    }, [threshold]);
+
+    return [ref, isVisible];
+};
+
+// ===== REVEAL WRAPPER COMPONENT =====
+const Reveal = ({ children, delay = 0, className = '' }) => {
+    const [ref, isVisible] = useScrollReveal();
+    return (
+        <div
+            ref={ref}
+            className={`${styles.reveal} ${isVisible ? styles.revealed : ''} ${className}`}
+            style={{ transitionDelay: `${delay}ms` }}
+        >
+            {children}
+        </div>
+    );
+};
+
+// ===== CODED PHONE MOCKUP COMPONENT =====
+const PhoneMockup = () => {
+    return (
+        <div className={styles.phoneMockupWrapper}>
+            <div className={styles.phoneDevice}>
+                {/* Phone Frame */}
+                <div className={styles.phoneFrame}>
+                    {/* Notch */}
+                    <div className={styles.phoneNotch}>
+                        <div className={styles.phoneSpeaker}></div>
+                        <div className={styles.phoneCamera}></div>
+                    </div>
+
+                    {/* Screen Content */}
+                    <div className={styles.phoneScreen}>
+                        {/* Status Bar */}
+                        <div className={styles.phoneStatusBar}>
+                            <span>9:41</span>
+                            <div className={styles.phoneStatusIcons}>
+                                <span>5G</span>
+                                <span>100%</span>
+                            </div>
+                        </div>
+
+                        {/* App Header */}
+                        <div className={styles.phoneAppHeader}>
+                            <div className={styles.phoneAppLogo}>MS</div>
+                            <span className={styles.phoneAppTitle}>MemeSense</span>
+                        </div>
+
+                        {/* Token Card */}
+                        <div className={styles.phoneTokenCard}>
+                            <div className={styles.phoneTokenHeader}>
+                                <span className={styles.phoneTokenName}>$PEPE</span>
+                                <span className={styles.phoneTokenChange}>+420%</span>
+                            </div>
+                            <div className={styles.phoneChart}>
+                                <svg viewBox="0 0 100 40" className={styles.phoneChartSvg}>
+                                    <defs>
+                                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+                                            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path
+                                        d="M0,35 Q15,30 25,28 T45,20 T65,12 T85,8 T100,5"
+                                        fill="none"
+                                        stroke="var(--primary)"
+                                        strokeWidth="2"
+                                    />
+                                    <path
+                                        d="M0,35 Q15,30 25,28 T45,20 T65,12 T85,8 T100,5 V40 H0 Z"
+                                        fill="url(#chartGrad)"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* Signal Badge */}
+                        <div className={styles.phoneSignal}>
+                            <span className={styles.phoneSignalDot}></span>
+                            78% - BUY
+                        </div>
+
+                        {/* Notification */}
+                        <div className={styles.phoneNotification}>
+                            <span className={styles.phoneNotifIcon}>🐋</span>
+                            <div className={styles.phoneNotifText}>
+                                <strong>Whale Alert</strong>
+                                <span>50 SOL buy detected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Side Buttons */}
+                <div className={styles.phoneSideButtons}>
+                    <div className={styles.phoneVolumeUp}></div>
+                    <div className={styles.phoneVolumeDown}></div>
+                </div>
+                <div className={styles.phonePowerButton}></div>
+            </div>
+        </div>
+    );
+};
+
+// ===== BROWSER MOCKUP COMPONENT =====
+const BrowserMockup = () => {
+    return (
+        <div className={styles.browserMockupWrapper}>
+            <div className={styles.browserWindow}>
+                {/* Browser Bar */}
+                <div className={styles.browserBar}>
+                    <div className={styles.browserDots}>
+                        <div className={styles.browserDot} style={{ background: '#ff5f56' }}></div>
+                        <div className={styles.browserDot} style={{ background: '#ffbd2e' }}></div>
+                        <div className={styles.browserDot} style={{ background: '#27c93f' }}></div>
+                    </div>
+                    <div className={styles.browserAddress}>
+                        pump.fun/coin/8xL...
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className={styles.browserContent}>
+                    {/* Simulated Pump Grid */}
+                    <div className={styles.pumpGrid}>
+                        {[...Array(9)].map((_, i) => (
+                            <div key={i} className={styles.pumpItem}></div>
+                        ))}
+                    </div>
+
+                    {/* Overlay */}
+                    <div className={styles.extensionOverlay}>
+                        <div className={styles.overlayHeader}>
+                            <div className={styles.overlayTitle}>
+                                <Sparkles size={12} /> MemeSense Overlay
+                            </div>
+                        </div>
+                        <div className={styles.overlayScore}>85/100</div>
+                        <div className={styles.overlayLabel}>Safety Score</div>
+
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Dev History</span>
+                            <span style={{ color: '#ccff00' }}>CLEAN</span>
+                        </div>
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Sniper</span>
+                            <span style={{ color: '#fff' }}>0%</span>
+                        </div>
+                        <div className={styles.overlayStat}>
+                            <span style={{ color: '#888' }}>Trend</span>
+                            <span style={{ color: '#ccff00' }}>Type II Buy</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ===== INTERACTIVE DEMO COMPONENT =====
+const DemoSection = () => {
+    const [input, setInput] = useState('');
+    const [mode, setMode] = useState('token'); // 'token' | 'wallet'
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState('');
+
+    const handleAnalyze = async (e) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+
+        setLoading(true);
+        setError('');
+        setResult(null);
+
+        try {
+            // WALLET MODE
+            if (mode === 'wallet') {
+                const response = await fetch('/api/profit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletToAnalyze: input.trim(), deviceId: 'demo-landing' })
+                });
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const payload = data.data;
+                    const metrics = payload.summary?.all || {};
+                    const ai = payload.aiVerdict || {};
+
+                    setResult({
+                        type: 'wallet',
+                        totalProfit: metrics.totalRealizedPnL || 0,
+                        winRate: metrics.winRate || 0,
+                        profitFactor: metrics.profitFactor || 0,
+                        realizedPnL: metrics.totalRealizedPnL || 0,
+                        trades: metrics.totalTrades || 0,
+                        verdict: ai.status || (metrics.totalRealizedPnL > 0 ? 'PROFITABLE' : 'UNPROFITABLE'),
+                        verdictColor: ai.score >= 50 ? '#CCFF00' : '#FF4444' // Simple logic, or extract from aiStatus
+                    });
+                } else {
+                    setError(data.error || 'Tracker analysis failed');
+                }
+            }
+            // TOKEN MODE
+            else {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ca: input.trim(), deviceId: 'demo-landing' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let verdict = 'WAIT';
+                    let verdictEmoji = '⏳';
+                    let verdictColor = '#FFB800';
+
+                    if (data.analysis?.recommendation === 'BUY' || data.analysis?.profitProbability > 60) {
+                        verdict = 'BUY';
+                        verdictEmoji = '🟢';
+                        verdictColor = '#CCFF00';
+                    } else if (data.analysis?.recommendation === 'AVOID' || data.analysis?.profitProbability < 30) {
+                        verdict = 'RUN';
+                        verdictEmoji = '🔴';
+                        verdictColor = '#FF4444';
+                    }
+
+                    setResult({
+                        type: 'token',
+                        token: data.token,
+                        verdict,
+                        verdictEmoji,
+                        verdictColor,
+                        probability: data.analysis?.profitProbability || 50,
+                        riskLevel: data.analysis?.riskLevel || 'MEDIUM',
+                        holders: data.holders?.total || 0,
+                        imageUrl: data.token?.imageUrl
+                    });
+                } else {
+                    setError(data.error || 'Sense analysis failed');
+                }
+            }
+        } catch (err) {
+            setError('Failed to connect. Try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <section id="demo" className={styles.section}>
+            <Reveal className={styles.sectionHeader}>
+                <span className={styles.sectionBadge}>🧪 TRY IT NOW</span>
+                <h2 className={styles.sectionTitle}>
+                    Free <span className={styles.heroTitleGradient}>Instant Demo</span>
+                </h2>
+                <p className={styles.sectionSubtitle}>
+                    {mode === 'token'
+                        ? 'Paste any Solana token address to get an instant verdict'
+                        : 'Paste a wallet address to sense its historical profitability'}
+                </p>
+            </Reveal>
+
+            <Reveal delay={100}>
+                <div className={styles.demoContainer}>
+                    {/* Tab Switcher */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+                        <button
+                            onClick={() => { setMode('token'); setResult(null); setError(''); }}
+                            style={{
+                                background: mode === 'token' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'token' ? '#ccff00' : '#888',
+                                border: mode === 'token' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Token Sense
+                        </button>
+                        <button
+                            onClick={() => { setMode('wallet'); setResult(null); setError(''); }}
+                            style={{
+                                background: mode === 'wallet' ? 'rgba(204, 255, 0, 0.1)' : 'transparent',
+                                color: mode === 'wallet' ? '#ccff00' : '#888',
+                                border: mode === 'wallet' ? '1px solid #ccff00' : '1px solid transparent',
+                                padding: '8px 24px',
+                                borderRadius: '100px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Profit Tracker
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleAnalyze} className={styles.demoForm}>
+                        <div className={styles.demoInputWrapper}>
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder={mode === 'token' ? "Paste token contract address..." : "Paste wallet address..."}
+                                className={styles.demoInput}
+                                disabled={loading}
+                            />
+                            <button
+                                type="submit"
+                                className={styles.demoButton}
+                                disabled={loading || !input.trim()}
+                            >
+                                {loading ? (
+                                    <span className={styles.demoSpinner}></span>
+                                ) : (
+                                    'Sense'
+                                )}
+                            </button>
+                        </div>
+                    </form>
+
+                    {error && (
+                        <div className={styles.demoError}>
+                            ⚠️ {error}
+                        </div>
+                    )}
+
+                    {/* TOKEN RESULT */}
+                    {result && result.type === 'token' && (
+                        <div className={styles.demoResult}>
+                            <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
+                                <span className={styles.demoVerdictEmoji}>{result.verdictEmoji}</span>
+                                <span className={styles.demoVerdictText} style={{ color: result.verdictColor }}>
+                                    {result.verdict}
+                                </span>
+                            </div>
+
+                            <div className={styles.demoMetrics}>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Token</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {result.imageUrl ? (
+                                            <img
+                                                src={result.imageUrl}
+                                                alt={result.token?.symbol}
+                                                style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                                                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: '24px', height: '24px', borderRadius: '50%',
+                                                background: 'linear-gradient(135deg, #666, #333)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '10px', fontWeight: 'bold', color: '#fff',
+                                                border: '1px solid rgba(255,255,255,0.2)'
+                                            }}>
+                                                {result.token?.symbol?.[0] || '?'}
+                                            </div>
+                                        )}
+                                        {/* Fallback hidden by default, shown on error */}
+                                        <div className="fallback-icon" style={{
+                                            display: 'none', width: '24px', height: '24px', borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #666, #333)',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '10px', fontWeight: 'bold', color: '#fff',
+                                            border: '1px solid rgba(255,255,255,0.2)'
+                                        }}>
+                                            {result.token?.symbol?.[0] || '?'}
+                                        </div>
+
+                                        <span className={styles.demoMetricValue}>${result.token?.symbol || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Profit Prob.</span>
+                                    <span className={styles.demoMetricValue}>{result.probability}%</span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Risk</span>
+                                    <span className={styles.demoMetricValue}>{result.riskLevel}</span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Holders</span>
+                                    <span className={styles.demoMetricValue}>{result.holders.toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            <a href={`/analyze/${input}`} className={styles.demoCta}>
+                                ✨ I Want Full Analysis
+                            </a>
+                        </div>
+                    )}
+
+                    {/* WALLET RESULT */}
+                    {result && result.type === 'wallet' && (
+                        <div className={styles.demoResult}>
+                            <div className={styles.demoVerdict} style={{ borderColor: result.verdictColor }}>
+                                <span className={styles.demoVerdictEmoji}>{result.totalProfit > 0 ? '🚀' : '📉'}</span>
+                                <span className={styles.demoVerdictText} style={{ color: result.verdictColor }}>
+                                    {result.verdict}
+                                </span>
+                            </div>
+
+                            <div className={styles.demoMetrics}>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Profit Factor</span>
+                                    <span className={styles.demoMetricValue} style={{ color: result.profitFactor >= 2 ? '#CCFF00' : '#fff' }}>
+                                        {result.profitFactor.toFixed(2)}x
+                                    </span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Total Profit</span>
+                                    <span className={styles.demoMetricValue} style={{ color: result.totalProfit >= 0 ? '#ccff00' : '#ff4444' }}>
+                                        {result.totalProfit.toFixed(2)} SOL
+                                    </span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Win Rate</span>
+                                    <span className={styles.demoMetricValue}>{result.winRate}%</span>
+                                </div>
+                                <div className={styles.demoMetric}>
+                                    <span className={styles.demoMetricLabel}>Trades</span>
+                                    <span className={styles.demoMetricValue}>{result.trades}</span>
+                                </div>
+                            </div>
+
+                            <a href={`/profit/${input}`} className={styles.demoCta}>
+                                ✨ View Full History
+                            </a>
+                        </div>
+                    )}
+                </div>
+            </Reveal>
+        </section>
+    );
+};
