@@ -22,6 +22,126 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import BetaBadge from '@/components/BetaBadge';
+import WaitlistModal from '@/components/WaitlistModal';
+import NotificationToast from '@/components/NotificationToast';
+
+// ... (Rest of imports and hooks remain same until Home component)
+
+export default function Home() {
+    // Live stats counter
+    const [stats, setStats] = useState({ analyzed: 12847, rugs: 1423 });
+    const [showWaitlist, setShowWaitlist] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+
+    const handleJoinBeta = (e) => {
+        e.preventDefault();
+        setShowWaitlist(true);
+    };
+
+    const handleAddToChrome = (e) => {
+        e.preventDefault();
+        setToastMessage('Upcoming feature');
+        setShowToast(true);
+    };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setStats(prev => ({
+                analyzed: prev.analyzed + Math.floor(Math.random() * 3),
+                rugs: prev.rugs + (Math.random() > 0.8 ? 1 : 0)
+            }));
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Scroll listener for dynamic header
+    const [isScrolled, setIsScrolled] = useState(false);
+    // ... existing useEffect ...
+
+    return (
+        <div className={styles.page}>
+            {/* Interactive Components */}
+            {showWaitlist && <WaitlistModal onClose={() => setShowWaitlist(false)} />}
+            {showToast && <NotificationToast message={toastMessage} onClose={() => setShowToast(false)} />}
+
+            {/* ===== HEADER ===== */}
+// ... header remains same ...
+
+            {/* ===== HERO SECTION ===== */}
+// ... hero remains same ...
+
+            // ... (Inside the Mobile App Showcase Section)
+            <div className={styles.showcaseList}>
+                <div className={styles.showcaseListItem}>
+                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                        <Zap size={14} />
+                    </div>
+                    Instant Whale Push Alerts
+                </div>
+                <div className={styles.showcaseListItem}>
+                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                        <Lock size={14} />
+                    </div>
+                    Biometric Security (FaceID)
+                </div>
+                <div className={styles.showcaseListItem}>
+                    <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: 'rgba(204,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccff00' }}>
+                        <Rocket size={14} />
+                    </div>
+                    One-Tap Quick Sense
+                </div>
+            </div>
+            <button onClick={handleJoinBeta} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
+                Join Beta Waitlist
+            </button>
+        </Reveal>
+                </div >
+            </section >
+
+        {/* ===== LIVE SENSE EXTENSION SHOWCASE ===== */ }
+        < section className = { styles.showcaseSection } style = {{ background: 'rgba(255,255,255,0.02)' }
+}>
+                <div className={`${styles.showcaseGlow} ${styles.glowRight}`}></div>
+                <div className={`${styles.showcaseContainer} ${styles.reverse}`}>
+                    {/* Visual Right (in DOM order, but reversed via CSS) */}
+                    <Reveal className={styles.showcaseVisual} delay={200}>
+                        <BrowserMockup />
+                    </Reveal>
+
+                    {/* Content Left */}
+                    <Reveal className={styles.showcaseContent} delay={0}>
+                        <div className={styles.showcaseBadge}>
+                            <Sparkles size={14} style={{ marginRight: 6 }} />
+                            Chrome Extension
+                        </div>
+                        <h2 className={styles.showcaseTitle}>
+                            God Mode for <br />
+                            <span className={styles.heroTitleGradient}>Pump.fun</span>
+                        </h2>
+                        <p className={styles.showcaseDesc}>
+                            Stop alt-tabbing to check safety. The Live Sense Extension overlays real-time safety scores, developer history, and social sentiment directly on the Pump.fun interface.
+                        </p>
+                        <div className={styles.showcaseList}>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Real-time Overlay HUD
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Auto-Rug Detection
+                            </div>
+                            <div className={styles.showcaseListItem}>
+                                <Check size={20} color="#CCFF00" />
+                                Tweet Volume Correlation
+                            </div>
+                        </div>
+                        <button onClick={handleAddToChrome} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
+                            Add to Chrome
+                        </button>
+                    </Reveal>
+                </div>
+            </section >
 
 // ===== SCROLL REVEAL HOOK =====
 const useScrollReveal = (threshold = 0.1) => {
@@ -520,6 +640,10 @@ export default function Home() {
 
     return (
         <div className={styles.page}>
+            {/* Interactive Components */}
+            {showWaitlist && <WaitlistModal onClose={() => setShowWaitlist(false)} />}
+            {showToast && <NotificationToast message={toastMessage} onClose={() => setShowToast(false)} />}
+
             {/* ===== HEADER ===== */}
             <header className={`${styles.header} ${isScrolled ? styles.headerScrolled : ''}`}>
                 <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={styles.logoContainer}>
@@ -852,9 +976,9 @@ export default function Home() {
                                 One-Tap Quick Sense
                             </div>
                         </div>
-                        <a href="#" className={styles.showcaseCta}>
+                        <button onClick={handleJoinBeta} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
                             Join Beta Waitlist
-                        </a>
+                        </button>
                     </Reveal>
                 </div>
             </section>
@@ -895,9 +1019,9 @@ export default function Home() {
                                 Tweet Volume Correlation
                             </div>
                         </div>
-                        <a href="#" className={styles.showcaseCta}>
+                        <button onClick={handleAddToChrome} className={styles.showcaseCta} style={{ cursor: 'pointer', border: '1px solid var(--border)' }}>
                             Add to Chrome
-                        </a>
+                        </button>
                     </Reveal>
                 </div>
             </section>
