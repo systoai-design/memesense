@@ -113,7 +113,11 @@ export default function UpgradePage() {
             const { blockhash } = await connection.getLatestBlockhash();
 
             // Determine price
-            const isDev = ['HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11', 'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2'].includes(userPubKey.toString());
+            const isDev = [
+                'HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11',
+                'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2',
+                'BUbC5ugi4tnscNowHrNfvNsU5SZfMfcnBv7NotvdWyq8'
+            ].includes(userPubKey.toString());
             let finalPrice = billingCycle === 'monthly' ? 0.5 : 5.0;
             if (isDev) finalPrice = 0.0001;
 

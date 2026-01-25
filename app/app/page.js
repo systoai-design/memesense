@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import PremiumModal from '@/components/PremiumModal';
@@ -25,6 +25,9 @@ export default function AppHome() {
     const [recentScans, setRecentScans] = useState([]);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false); // Guard against double clicks
+
+    // Ref to prevent race condition between auto-check and manual connect
+    const isManualConnecting = useRef(false);
 
     const [userTier, setUserTier] = useState('FREE');
 
@@ -113,21 +116,29 @@ export default function AppHome() {
                     handleLogin(resp.publicKey.toString());
                 } catch (err) {
                     // Not connected, show modal
+                    // GUARD: Only show modal if we aren't manually connecting
+                    if (!isManualConnecting.current) {
+                        setIsLoadingAuth(false);
+                        setShowConnectModal(true);
+                    }
+                }
+            } else {
+                if (!isManualConnecting.current) {
                     setIsLoadingAuth(false);
                     setShowConnectModal(true);
                 }
-            } else {
-                setIsLoadingAuth(false);
-                setShowConnectModal(true);
             }
         };
 
         // Delay slightly to prevent flash
-        setTimeout(checkWallet, 500);
+        const timer = setTimeout(checkWallet, 500);
+        return () => clearTimeout(timer);
     }, [handleLogin]);
 
     const handleConnect = async () => {
         if (isConnecting) return;
+
+        isManualConnecting.current = true; // Flag manual connect
 
         const provider = getProvider();
 
