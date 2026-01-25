@@ -549,7 +549,7 @@ export default function Home() {
                         </a>
                     </div>
                     <a href="/app" target="_blank" className={styles.headerCta}>
-                        {isScrolled ? '🚀 Launch' : '🚀 Launch App'}
+                        {isScrolled ? 'Launch' : 'Launch App'}
                     </a>
                 </div>
             </header>
