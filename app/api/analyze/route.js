@@ -58,7 +58,12 @@ export async function POST(request) {
         }
 
         // Admin Bypass & Duplicate Scan Check
-        const isAdmin = walletAddress && walletAddress === process.env.ADMIN_WALLET;
+        const ADMIN_WALLETS = [
+            process.env.ADMIN_WALLET,
+            'BUbC5ugi4tnscNowHrNfvNsU5SZfMfcnBv7NotvdWyq8'
+        ].filter(Boolean);
+
+        const isAdmin = walletAddress && ADMIN_WALLETS.includes(walletAddress);
         const skipUsageRecord = isAdmin || hasUserScanned(user.id, ca);
 
         // Check trial status

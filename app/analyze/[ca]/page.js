@@ -108,8 +108,10 @@ export default function AnalyzePage() {
                         token: result.token,
                         metrics: result.metrics,
                         bondingCurve: result.bondingCurve,
-                        mechanics: { ...prevData.mechanics, curveVelocity: result.mechanics.curveVelocity }, // Update specific live mechanics
-                        // Keep locked analysis & entry point
+                        mechanics: result.mechanics,
+                        // Update Analysis & Entry Point (Unlocked)
+                        analysis: result.analysis,
+                        entryPoint: result.entryPoint,
                         timestamp: new Date().toISOString()
                     };
                 });
@@ -484,6 +486,25 @@ export default function AnalyzePage() {
                             </div>
                         </div>
 
+                        {/* Snapshot Warning */}
+                        <div style={{
+                            marginTop: '16px',
+                            padding: '8px 12px',
+                            background: 'rgba(34, 197, 94, 0.05)',
+                            border: '1px solid rgba(34, 197, 94, 0.15)',
+                            borderRadius: '8px',
+                            fontSize: '0.75rem',
+                            color: '#4ade80',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <div className={styles.liveDot} style={{ background: '#4ade80', boxShadow: '0 0 8px rgba(74, 222, 128, 0.4)' }}></div>
+                            <span>
+                                <strong>AI Analysis Live:</strong> Updating automatically based on price action.
+                            </span>
+                        </div>
+
                         {/* NEW: Trade Setup Card */}
                         {data.entryPoint && (
                             <div style={{
@@ -527,9 +548,9 @@ export default function AnalyzePage() {
                                 </div>
 
                                 {/* Row 2: Exit & Risk */}
-                                <div style={{ 
-                                    display: 'grid', 
-                                    gridTemplateColumns: '1fr 1fr', 
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
                                     gap: '20px',
                                     paddingTop: '4px'
                                 }}>
@@ -541,10 +562,10 @@ export default function AnalyzePage() {
                                         <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ccff00', display: 'block' }}>
                                             {(() => {
                                                 if (!data.entryPoint.targetMcap) return '---';
-                                                
+
                                                 let exitTarget = 0;
                                                 const mcap = data.entryPoint.targetMcap;
-                                                
+
                                                 if (!bondingCurve.isGraduated) {
                                                     exitTarget = bondingCurve.graduationThreshold || 69000;
                                                 } else if (mcap < 1000000) { // Under 1M
@@ -555,36 +576,36 @@ export default function AnalyzePage() {
                                                     exitTarget = mcap * 1.3; // 30% Scalp
                                                 }
 
-                                                return `$${(exitTarget/1000).toFixed(1)}k`;
+                                                return `$${(exitTarget / 1000).toFixed(1)}k`;
                                             })()}
                                         </span>
-                                        <div style={{ 
+                                        <div style={{
                                             display: 'inline-block',
                                             marginTop: '4px',
                                             padding: '2px 6px',
                                             background: 'rgba(204, 255, 0, 0.15)',
                                             borderRadius: '4px',
-                                            fontSize: '0.75rem', 
-                                            color: '#ccff00', 
-                                            fontWeight: 'bold' 
+                                            fontSize: '0.75rem',
+                                            color: '#ccff00',
+                                            fontWeight: 'bold'
                                         }}>
                                             {(() => {
-                                                 if (!data.entryPoint.targetMcap) return '';
-                                                 
-                                                 const mcap = data.entryPoint.targetMcap;
-                                                 let label = '';
-                                                 
-                                                 if (!bondingCurve.isGraduated) {
-                                                     label = 'Graduation';
-                                                 } else if (mcap < 1000000) {
-                                                     label = '5x Target';
-                                                 } else if (mcap < 10000000) {
-                                                     label = '2x Target';
-                                                 } else {
-                                                     label = '+30% Scalp';
-                                                 }
+                                                if (!data.entryPoint.targetMcap) return '';
 
-                                                 return label.toUpperCase();
+                                                const mcap = data.entryPoint.targetMcap;
+                                                let label = '';
+
+                                                if (!bondingCurve.isGraduated) {
+                                                    label = 'Graduation';
+                                                } else if (mcap < 1000000) {
+                                                    label = '5x Target';
+                                                } else if (mcap < 10000000) {
+                                                    label = '2x Target';
+                                                } else {
+                                                    label = '+30% Scalp';
+                                                }
+
+                                                return label.toUpperCase();
                                             })()}
                                         </div>
                                     </div>
@@ -597,15 +618,15 @@ export default function AnalyzePage() {
                                         <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ef4444', display: 'block' }}>
                                             {data.entryPoint.targetMcap ? `$${(data.entryPoint.targetMcap * 0.7 / 1000).toFixed(1)}k` : '---'}
                                         </span>
-                                        <div style={{ 
+                                        <div style={{
                                             display: 'inline-block',
                                             marginTop: '4px',
                                             padding: '2px 6px',
                                             background: 'rgba(239, 68, 68, 0.15)',
                                             borderRadius: '4px',
-                                            fontSize: '0.75rem', 
-                                            color: '#ef4444', 
-                                            fontWeight: 'bold' 
+                                            fontSize: '0.75rem',
+                                            color: '#ef4444',
+                                            fontWeight: 'bold'
                                         }}>
                                             -30% STOP LOSS
                                         </div>
@@ -891,7 +912,7 @@ export default function AnalyzePage() {
                         </div>
 
                         <ul className={styles.holdersList}>
-                            {(holders.topHolders || []).slice(0, user.tier === 'PREMIUM' ? 50 : 5).map((holder, i) => (
+                            {(holders.topHolders || []).slice(0, user.tier === 'PREMIUM' ? 10 : 5).map((holder, i) => (
                                 <li key={i} className={styles.holderItem}>
                                     <span className={styles.holderRank}>#{i + 1}</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -917,7 +938,7 @@ export default function AnalyzePage() {
                                     onClick={() => setShowPremiumModal(true)}
                                     style={{ background: 'transparent', border: 'none', color: '#ccff00', cursor: 'pointer', fontSize: '0.85rem' }}
                                 >
-                                    View Top 50 Holders &rarr;
+                                    View Top 10 Holders &rarr;
                                 </button>
                             </div>
                         )}
