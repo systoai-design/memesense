@@ -307,7 +307,7 @@ export default function AppHome() {
                         >
                             {userTier === 'PREMIUM' ? '👑 Premium Active' :
                                 userTier === 'TRIAL' ? '⏳ Trial Active (Upgrade)' :
-                                    '🎁 Premium Trial (Upgrade)'}
+                                    '🎁 Upgrade to Pro'}
                         </div>
                     )}
                     {walletAddress ? (
