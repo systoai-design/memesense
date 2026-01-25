@@ -30,6 +30,7 @@ export default function AppHome() {
     const isManualConnecting = useRef(false);
 
     const [userTier, setUserTier] = useState('FREE');
+    const [userStats, setUserStats] = useState({ usedToday: 0, dailyLimit: 10 });
 
     const getProvider = () => {
         if ('phantom' in window) {
@@ -66,6 +67,12 @@ export default function AppHome() {
                     // User is authenticated and onboarded
                     setIsLoadingAuth(false);
                     setUserTier(data.user.tier); // Update tier state
+                    if (data.user.usedToday !== undefined) {
+                        setUserStats({
+                            usedToday: data.user.usedToday,
+                            dailyLimit: data.user.dailyLimit
+                        });
+                    }
                 }
             }
         } catch (err) {
@@ -292,22 +299,40 @@ export default function AppHome() {
                 <div className={`${styles.navGroup} ${styles.navRight}`}>
                     {/* User Tier Status Badge */}
                     {walletAddress && (
-                        <div
-                            className={styles.badge}
-                            onClick={() => setShowPremiumModal(true)}
-                            style={{
-                                cursor: 'pointer',
-                                background: userTier === 'PREMIUM' ? 'rgba(255, 215, 0, 0.2)' :
-                                    userTier === 'TRIAL' ? 'rgba(204, 255, 0, 0.2)' :
-                                        'rgba(255, 255, 255, 0.1)',
-                                color: userTier === 'PREMIUM' ? '#ffd700' :
-                                    userTier === 'TRIAL' ? '#ccff00' :
-                                        '#fff'
-                            }}
-                        >
-                            {userTier === 'PREMIUM' ? '👑 Premium Active' :
-                                userTier === 'TRIAL' ? '⏳ Trial Active (Upgrade)' :
-                                    '🎁 Upgrade to Pro'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {userTier === 'FREE' && (
+                                <div style={{
+                                    background: 'rgba(204, 255, 0, 0.1)',
+                                    color: '#ccff00',
+                                    padding: '6px 14px',
+                                    borderRadius: '100px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    border: '1px solid rgba(204, 255, 0, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    ⚡ {userStats.usedToday || 0}/{userStats.dailyLimit || 10} FREE SCAN(S)
+                                </div>
+                            )}
+                            <div
+                                className={styles.badge}
+                                onClick={() => setShowPremiumModal(true)}
+                                style={{
+                                    cursor: 'pointer',
+                                    background: userTier === 'PREMIUM' ? 'rgba(255, 215, 0, 0.2)' :
+                                        userTier === 'TRIAL' ? 'rgba(204, 255, 0, 0.2)' :
+                                            'rgba(255, 255, 255, 0.1)',
+                                    color: userTier === 'PREMIUM' ? '#ffd700' :
+                                        userTier === 'TRIAL' ? '#ccff00' :
+                                            '#fff'
+                                }}
+                            >
+                                {userTier === 'PREMIUM' ? '👑 Premium Active' :
+                                    userTier === 'TRIAL' ? '⏳ Trial Active (Upgrade)' :
+                                        '🎁 Upgrade to Pro'}
+                            </div>
                         </div>
                     )}
                     {walletAddress ? (

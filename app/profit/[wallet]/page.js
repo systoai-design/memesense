@@ -104,6 +104,7 @@ export default function ProfitPage() {
     // Decode wallet address if it's encoded or just use parameter
     const walletToAnalyze = decodeURIComponent(walletParam);
 
+    const [user, setUser] = useState({ tier: 'FREE', usedToday: 0, dailyLimit: 10 });
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -134,11 +135,13 @@ export default function ProfitPage() {
                 body: JSON.stringify({
                     walletToAnalyze: address,
                     deviceId,
-                    userWallet
+                    userWallet,
+                    isRefresh: false
                 })
             });
 
             const json = await res.json();
+            if (json.user) setUser(json.user); // Store usage data
 
             if (!res.ok) {
                 if (json.isPremiumLocked) {
@@ -317,6 +320,26 @@ export default function ProfitPage() {
                                 <Wallet size={32} color="#ccff00" />
                             </div>
                             <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <span className={`badge ${user.tier === 'PREMIUM' || user.tier === 'TRIAL' ? 'badge-premium' : 'badge-info'}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
+                                        {user.tier === 'TRIAL' ? 'PREMIUM TRIAL' : user.tier}
+                                    </span>
+                                    {user.tier === 'FREE' && (
+                                        <span style={{
+                                            background: 'rgba(204, 255, 0, 0.1)',
+                                            color: '#ccff00',
+                                            fontSize: '10px',
+                                            padding: '2px 8px',
+                                            borderRadius: '4px',
+                                            fontWeight: 'bold',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}>
+                                            ⚡ {user.usedToday || 0}/{user.dailyLimit || 10} FREE SCAN(S)
+                                        </span>
+                                    )}
+                                </div>
                                 <div className={styles.label} style={{ marginBottom: 4 }}>Wallet Address</div>
                                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                                     <div className={styles.value} style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}>

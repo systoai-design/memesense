@@ -81,7 +81,7 @@ export default function AnalyzePage() {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ca, deviceId, walletAddress }),
+                body: JSON.stringify({ ca, deviceId, walletAddress, isRefresh }),
                 signal: controller.signal
             });
 

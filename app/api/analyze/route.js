@@ -64,7 +64,11 @@ export async function POST(request) {
         ].filter(Boolean);
 
         const isAdmin = walletAddress && ADMIN_WALLETS.includes(walletAddress);
-        const skipUsageRecord = isAdmin || hasUserScanned(user.id, ca);
+        const isRefresh = body.isRefresh || false;
+
+        // Skip usage recording ONLY for admins or auto-polling (isRefresh)
+        // Manual scans ALWAYS count as 1 credit against history/limit
+        const skipUsageRecord = isAdmin || isRefresh;
 
         // Check trial status
         const isPremium = user.tier === 'PREMIUM' || user.tier === 'TRIAL' || user.tier === 'Premium' || user.tier === 'Premium Trial';
@@ -265,7 +269,7 @@ export async function POST(request) {
         }
 
         // Record Usage (Billed only on fresh scans)
-        if (!skipUsageRecord && !isCacheValid) {
+        if (!skipUsageRecord) {
             await recordUsage(user.id, ca);
         }
 
@@ -393,8 +397,8 @@ export async function POST(request) {
             chart: [],
             user: {
                 tier: user.tier,
-                remainingToday: usageCheck.remainingToday,
-                usedToday: usageCheck.usedToday,
+                remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
+                usedToday: skipUsageRecord ? usageCheck.usedToday : (usageCheck.usedToday + 1),
                 dailyLimit: usageCheck.dailyLimit,
                 credits: user.credits
             },

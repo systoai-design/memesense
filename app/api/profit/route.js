@@ -18,12 +18,11 @@ export async function POST(request) {
         // Admin Bypass
         const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
         const isAdmin = userWallet === ADMIN_WALLET;
+        const isRefresh = body.isRefresh || false;
 
         // Check Usage Limits (for Free users)
-        // We allow FREE, PREMIUM, TRIAL. But FREE is limited.
         const usageCheck = await canUseAnalysis(user.id);
 
-        // Strict Block only if NOT allowed AND NOT Admin AND NOT Demo Landing
         if (!isAdmin && deviceId !== 'demo-landing' && !usageCheck.allowed) {
             return NextResponse.json({
                 success: false,
@@ -32,8 +31,6 @@ export async function POST(request) {
                 debugInfo: {
                     userId: user.id,
                     tier: user.tier,
-                    receivedWallet: userWallet,
-                    subscriptionExpiry: user.subscription_expiry
                 }
             }, { status: 403 });
         }
@@ -56,14 +53,9 @@ export async function POST(request) {
             }, { status: 500 });
         }
 
-        // Record usage if we seemingly got data (or just record attempt?)
-        // Usually record usage only if we return value.
-        // We'll record at the end.
-
         // Fetch Balance (SOL)
         let balance = 0;
         try {
-            // Extract Helius key or from env
             const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
             if (apiKey) {
                 const balRes = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
@@ -84,8 +76,9 @@ export async function POST(request) {
             });
         }
 
-        // Record usage now that we found valid history (deduct credit/limit)
-        if (!isAdmin && deviceId !== 'demo-landing') {
+        // Manual scans always count as 1 credit
+        const skipUsageRecord = isAdmin || isRefresh || deviceId === 'demo-landing';
+        if (!skipUsageRecord) {
             await recordUsage(user.id, walletToAnalyze);
         }
 
@@ -93,22 +86,17 @@ export async function POST(request) {
         const initialAnalysis = analyzeTimeWindows(trades);
 
         // 4. Fetch Prices for Open Positions
-        // Extract all mints that have "OPEN" status in 'all' timeframe
         const openMints = initialAnalysis.all.details
             .filter(p => p.status === 'OPEN' && p.remainingTokens > 0)
             .map(p => p.mint);
 
-        // Also fetch prices for top closed positions just in case (optional, but let's stick to open)
-        // Combine unique mints
         const uniqueMintsToFetch = [...new Set(openMints)];
         let priceMap = {};
 
         if (uniqueMintsToFetch.length > 0) {
-            priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90)); // Limit to 90 to be safe
+            priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90));
         }
 
-
-        // 5a. Fetch SOL Price (wSOL)
         let solPrice = 0;
         try {
             const wSOL = 'So11111111111111111111111111111111111111112';
@@ -118,47 +106,34 @@ export async function POST(request) {
             console.error('Info: Failed to fetch SOL price', e);
         }
 
-        // 5b. Re-Analyze with Prices
-        const analysis = analyzeTimeWindows(trades, priceMap); // Make sure analyzeTimeWindows passes priceMap 
+        const analysis = analyzeTimeWindows(trades, priceMap);
 
-        // 6. Metadata Optimization
-        // Get unique mints from ALL time trades
         const allDetails = analysis.all.details;
         const uniqueMints = [...new Set(allDetails.map(d => d.mint))];
         const tokenMetadata = await getBatchTokenMetadata(uniqueMints);
 
-        // 7. Inject USD Values & AI Verdict
-        const summary = analysis; // It's an object with keys 1d, 7d, etc.
-
-        // GLOBAL AI VERDICT (Based on 'all' timeframe)
+        const summary = analysis;
         const globalMetrics = summary['all'];
         let aiStatus = 'UNPROFITABLE';
         let aiScore = 50;
 
         if (globalMetrics.profitFactor >= 1.5 && globalMetrics.winRate > 40) {
             aiStatus = 'PROFITABLE';
-            aiScore = 85 + Math.min(globalMetrics.profitFactor, 5); // Cap bonus
+            aiScore = 85 + Math.min(globalMetrics.profitFactor, 5);
         } else if (globalMetrics.profitFactor >= 1.0) {
-            aiStatus = 'PROFITABLE'; // Marginally
+            aiStatus = 'PROFITABLE';
             aiScore = 65;
         } else {
-            // Unprofitable
-            // Check if "High Risk" (high volume/activity but losing)
             if (globalMetrics.totalTrades > 50) aiStatus = 'HIGH RISK';
             aiScore = 30;
         }
 
-        // Generate AI Text Summary
-        // REMOVED at user request to improve speed and avoid rate limits
-        const aiSummary = null;
-
         const aiVerdict = {
             status: aiStatus,
             score: Math.min(Math.round(aiScore), 100),
-            summary: aiSummary
+            summary: null
         };
 
-        // Add USD equivalents to each timeframe
         Object.keys(summary).forEach(key => {
             const metrics = summary[key];
             metrics.totalRealizedPnLUSD = metrics.totalRealizedPnL * solPrice;
@@ -167,17 +142,15 @@ export async function POST(request) {
             metrics.avgPnLUSD = metrics.avgPnL * solPrice;
             metrics.totalVolumeUSD = metrics.totalVolume * solPrice;
 
-            // Total Unrealized Sum
             const totalUnrealizedPnL = metrics.details.reduce((acc, p) => acc + (p.unrealizedPnL || 0), 0);
             metrics.totalUnrealizedPnL = totalUnrealizedPnL;
             metrics.totalUnrealizedPnLUSD = totalUnrealizedPnL * solPrice;
         });
 
-        // Record Scan History
-        if (!isAdmin && deviceId !== 'demo-landing') {
+        if (!skipUsageRecord) {
             await recordScan(user.id, {
                 address: walletToAnalyze,
-                name: 'Wallet', // Default name, user can label it later
+                name: 'Wallet',
                 symbol: 'SOL',
                 imageUrl: null
             }, 'wallet');
@@ -187,10 +160,17 @@ export async function POST(request) {
             success: true,
             data: {
                 summary,
-                tokenInfo: tokenMetadata, // Map of mint -> { symbol, image, name }
+                tokenInfo: tokenMetadata,
                 balance,
                 solPrice,
                 aiVerdict
+            },
+            user: {
+                tier: user.tier,
+                remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
+                usedToday: skipUsageRecord ? usageCheck.usedToday : (usageCheck.usedToday + 1),
+                dailyLimit: usageCheck.dailyLimit,
+                credits: user.credits
             }
         });
 
