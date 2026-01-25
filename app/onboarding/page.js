@@ -40,7 +40,15 @@ export default function Onboarding() {
                     return;
                 }
             } else {
-                alert("Phantom wallet not found.");
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                    const currentUrl = window.location.href;
+                    const ref = window.location.origin;
+                    const deepLink = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(ref)}`;
+                    window.open(deepLink, '_blank');
+                    return;
+                }
+                alert("Phantom wallet not found. Please install the Phantom wallet extension.");
                 return;
             }
         }

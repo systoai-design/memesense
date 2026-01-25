@@ -82,8 +82,17 @@ export default function UpgradePage() {
 
             const provider = getProvider();
             if (!provider) {
-                window.open('https://phantom.app/', '_blank');
-                throw new Error('Phantom Wallet not found! Please install it.');
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                    const currentUrl = window.location.href;
+                    const ref = window.location.origin;
+                    const deepLink = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(ref)}`;
+                    window.open(deepLink, '_blank');
+                    return; // Stop execution
+                } else {
+                    window.open('https://phantom.app/', '_blank');
+                    throw new Error('Phantom Wallet not found! Please install it.');
+                }
             }
 
             // 1. Connect
