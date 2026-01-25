@@ -31,6 +31,10 @@ function formatAge(ageHours) {
     }
 }
 
+// Global Simple Cache (In-Memory)
+// Structure: { [ca]: { data: object, timestamp: number } }
+global.analysisCache = global.analysisCache || {};
+
 export async function POST(request) {
     try {
         const body = await request.json();
@@ -53,256 +57,219 @@ export async function POST(request) {
             }, { status: 403 });
         }
 
-        // Check trial status
-        const trialStatus = { remaining: usageCheck.remainingToday };
-
         // Admin Bypass & Duplicate Scan Check
         const isAdmin = walletAddress && walletAddress === process.env.ADMIN_WALLET;
         const skipUsageRecord = isAdmin || hasUserScanned(user.id, ca);
 
-        // Helper for timing
-        const timeOp = async (name, fn) => {
-            console.time(name);
-            try {
-                const res = await fn;
-                console.timeEnd(name);
-                return res;
-            } catch (e) {
-                console.timeEnd(name);
-                console.error(`${name} failed:`, e.message);
-                throw e; // Rethrow to let Promise.all handling work or be caught below
-            }
-        };
+        // Check trial status
+        const isPremium = user.tier === 'PREMIUM' || user.tier === 'TRIAL' || user.tier === 'Premium' || user.tier === 'Premium Trial';
 
-        // Fetch all data in parallel with logging
-        const [tokenData, estHolderData, bondingData, sniperData, realHolderData, tokenAuthorityData, realTotalHolders] = await Promise.all([
-            timeOp('getTokenData', getTokenData(ca)),
-            timeOp('getHolderData', getHolderData(ca)),
-            timeOp('getBondingCurveData', getBondingCurveData(ca)),
-            timeOp('getSniperData', getSniperData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
-            timeOp('getRealHolderData', getRealHolderData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
-            // getUniqueBuyers removed for speed
-            timeOp('getTokenAuthorities', getTokenAuthorities(ca).catch(err => ({ burnPercent: 0, isRenounced: false, isFreezeRevoked: false, isEstimated: true }))),
-            timeOp('getTotalHolderCount', getTotalHolderCount(ca).catch(err => null))
-        ]);
+        // --- HYBRID CACHING STRATEGY ---
+        // 1. Check Cache for "Heavy" Data (AI, Holders, Whales)
+        const CACHE_TTL = 60 * 1000; // 60 Seconds
+        const now = Date.now();
+        const cachedEntry = global.analysisCache[ca];
+        const isCacheValid = cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL);
 
-        const uniqueBuyersCount = 0; // Disabled for performance
+        // 2. ALWAYS Fetch "Light" Data (Real-Time Price/MCap)
+        // We always fetch tokenData to ensure the UI shows live price actions
+        const tokenData = await getTokenData(ca);
+        const ageHours = tokenData.ageHours || 0;
 
-        // Mock ohlcvData since we removed the fetch, in case downstream logic needs it (though it shouldn't)
-        const ohlcvData = [];
+        let bucketedData = {};
+
+        // PREMIUM LIVE ALPHA ENGINE: 
+        // If user is Premium, we want LIVE Whale & Dev data. 
+        // We still cache the heavy Holder list and AI, but we re-run the specific Alpha checks if possible/fast enough.
+        // Actually, fetching Whale Analysis requires grabbing the holder list again. 
+        // Compromise: We use cached Holder List, but we RE-RUN the Whale Balance checks on those holders if Premium.
+        // For now, simpler approach: Premium users just invalidate the specific parts of the cache or we fetch them fresh and merge.
+
+        if (isCacheValid) {
+            console.log(`[CACHE HIT] Serving Cached Analysis for ${ca}`);
+            bucketedData = cachedEntry.data;
+        } else {
+            console.log(`[CACHE MISS] Running Full Analysis for ${ca}`);
+            const timeOp = async (name, fn) => {
+                try { return await fn; } catch (e) {
+                    console.error(`${name} failed:`, e.message);
+                    throw e;
+                }
+            };
+
+            // Fetch Heavy Data
+            const [estHolderData, bondingData, sniperData, realHolderData, tokenAuthorityData, realTotalHolders] = await Promise.all([
+                timeOp('getHolderData', getHolderData(ca)),
+                timeOp('getBondingCurveData', getBondingCurveData(ca)),
+                timeOp('getSniperData', getSniperData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
+                timeOp('getRealHolderData', getRealHolderData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
+                timeOp('getTokenAuthorities', getTokenAuthorities(ca).catch(err => ({ burnPercent: 0, isRenounced: false, isFreezeRevoked: false, isEstimated: true }))),
+                timeOp('getTotalHolderCount', getTotalHolderCount(ca).catch(err => null))
+            ]);
+
+            bucketedData = {
+                estHolderData,
+                bondingData,
+                sniperData,
+                realHolderData,
+                tokenAuthorityData,
+                realTotalHolders
+            };
+        }
+
+        // Destructure Data
+        const { estHolderData, bondingData, sniperData, realHolderData, tokenAuthorityData, realTotalHolders } = bucketedData;
 
         // Merge Holder Data
         const holderData = {
             ...estHolderData,
             ...(!realHolderData.isEstimated ? {
                 top10HoldersPercent: realHolderData.top10Percent,
-                top10Holders: realHolderData.top10Holders,
-                isEstimated: false // Critical metrics are real
+                top10Holders: realHolderData.top10Holders, // Ensure this is Top 10
+                isEstimated: false
             } : {})
         };
+        if (realTotalHolders) holderData.totalHolders = realTotalHolders;
 
-        // Override total holders if we got real data
-        if (realTotalHolders) {
-            holderData.totalHolders = realTotalHolders;
+        // Dev Wallet Check
+        // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
+        let devWalletData;
+        if (isPremium || !isCacheValid || !cachedEntry.devWalletData) {
+            // Fetch Fresh for Premium or Cache Miss
+            // Note: If cache hit but user is premium, we run this.
+            if (isPremium && isCacheValid) console.log('[ALPHA ENGINE] Premium User: Running Fresh Dev Check');
+            devWalletData = await getDevWalletStatus(ca, holderData, ageHours).catch(err => ({
+                action: 'UNKNOWN', isEstimated: true, error: err.message
+            }));
+        } else {
+            devWalletData = cachedEntry.devWalletData;
         }
 
-        // Calculate additional metrics
-        const ageHours = tokenData.ageHours || 0;
-
-        // Dev Wallet Status - Called AFTER holderData for inference fallback
-        const devWalletData = await getDevWalletStatus(ca, holderData, ageHours).catch(err => ({
-            action: 'UNKNOWN',
-            isEstimated: true,
-            error: err.message
-        }));
-
-        // 1. Bonding Curve Velocity (% progress per minute)
-        // Estimate velocity if we lack historical data
+        // Metrics Calculation
         const bondingVelocity = ageHours > 0
-            ? Math.min(100, bondingData.progress / (ageHours * 60)) // % per minute
-            : (bondingData.progress > 0 ? 5 : 0); // High velocity if very new with progress
+            ? Math.min(100, bondingData.progress / (ageHours * 60))
+            : (bondingData.progress > 0 ? 5 : 0);
 
-        // 2. Organic Volume Score (Wash Trading Filter)
-        // High volume relative to market cap + balanced buy/sell ratio = Organic
-        const volumeDensity = tokenData.marketCap > 0 ? (tokenData.volume24h / 4 / tokenData.marketCap) : 0; // 6h volume estimate
-        const tradeDistribution = Math.min(tokenData.buyCount, tokenData.sellCount) / Math.max(tokenData.buyCount, tokenData.sellCount); // Closer to 1 is better
+        const volumeDensity = tokenData.marketCap > 0 ? (tokenData.volume24h / 4 / tokenData.marketCap) : 0;
+        const tradeDistribution = Math.min(tokenData.buyCount, tokenData.sellCount) / Math.max(tokenData.buyCount, tokenData.sellCount);
         const organicScore = Math.min(1, (tradeDistribution * 0.6) + (Math.min(1, volumeDensity) * 0.4));
 
+        const isWinningProfile = bondingData.progress > 10 && bondingVelocity > 0.02 && organicScore > 0.5;
 
-        // 3. Winning Profile Check
-        const isWinningProfile =
-            bondingData.progress > 10 &&
-            bondingVelocity > 0.02 && // > 2% per 5 mins
-            organicScore > 0.5;
-
-        // Prepare data for AI analysis
-        const analysisInput = {
-            ...tokenData,
-            holders: holderData.totalHolders,
-            uniqueBuyers: uniqueBuyersCount,
-            top10HoldersPercent: holderData.top10HoldersPercent,
-            bondingProgress: bondingData.progress,
-            bondingVelocity: bondingVelocity.toFixed(4),
-            organicScore: organicScore.toFixed(2),
-            isWinningProfile,
-            ageHours
-        };
-
-        // Get AI analysis (metrics-based for now, chart analysis requires image)
+        // AI Analysis (Skip if cached)
         let aiAnalysis = null;
-        try {
-            console.log('Starting Gemini AI analysis...');
-            console.log('GEMINI_API_KEY set:', !!process.env.GEMINI_API_KEY);
-            const geminiResult = await analyzeMetrics(analysisInput);
-            console.log('Gemini result:', JSON.stringify(geminiResult, null, 2));
-            if (geminiResult.success) {
-                aiAnalysis = geminiResult.analysis;
-                console.log('Gemini AI analysis successful');
-            } else {
-                console.log('Gemini returned success=false:', geminiResult.error);
-                // Try OpenAI as fallback
-                /* 
-                console.log('Trying OpenAI fallback...');
-                // const { analyzeWithOpenAI } = require('@/lib/openai-analyze');
-                // const openaiResult = await analyzeWithOpenAI(analysisInput);
-                // if (openaiResult.success) {
-                //     aiAnalysis = openaiResult.analysis;
-                //     console.log('OpenAI AI analysis successful');
-                // } 
-                */
+        if (isCacheValid && cachedEntry.aiAnalysis) {
+            aiAnalysis = cachedEntry.aiAnalysis;
+        } else {
+            // Only run AI if cache is invalid
+            const uniqueBuyersCount = 0;
+            const analysisInput = {
+                ...tokenData,
+                holders: holderData.totalHolders,
+                uniqueBuyers: uniqueBuyersCount,
+                top10HoldersPercent: holderData.top10HoldersPercent,
+                bondingProgress: bondingData.progress,
+                bondingVelocity: bondingVelocity.toFixed(4),
+                organicScore: organicScore.toFixed(2),
+                isWinningProfile,
+                ageHours
+            };
+
+            try {
+                const geminiResult = await analyzeMetrics(analysisInput);
+                if (geminiResult.success) aiAnalysis = geminiResult.analysis;
+            } catch (e) {
+                console.error('AI Analysis failed', e);
             }
-        } catch (error) {
-            console.error('Gemini AI analysis failed:', error.message);
-            // ... (fallback logic remains)
         }
 
-        // --- WHALE & DEV ANALYSIS ---
-        // Collect addresses to check: Top 10 Holders + Snipers
-        const walletsToCheck = new Set();
-        if (holderData.top10Holders) {
-            holderData.top10Holders.forEach(h => {
-                // Use OWNER address if available (for SOL balance check), fallback to address
-                const walletToCheck = h.owner || h.address;
-                walletsToCheck.add(walletToCheck);
-            });
-        }
-        if (sniperData && sniperData.sniperWallets) {
-            sniperData.sniperWallets.forEach(s => walletsToCheck.add(s.address));
-        }
-
-        // Run Whale Analysis
-        // Run Whale Analysis with strict filtering
-        // We only want whales that are NOT known system addresses (Bonding Curve, etc.)
-        const whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
-
-        // Filter whales for UI: Remove any that align with known system addresses from holder data
-        if (whaleAnalysis.whales && holderData.top10Holders) {
-            const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
-            whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
-            whaleAnalysis.count = whaleAnalysis.whales.length;
+        // Whale Analysis (Expensive RPC)
+        let whaleAnalysis = {};
+        // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
+        if (isPremium || !isCacheValid || !cachedEntry.whaleAnalysis) {
+            if (isPremium && isCacheValid) console.log('[ALPHA ENGINE] Premium User: Running Fresh Whale Check');
+            const walletsToCheck = new Set();
+            if (holderData.top10Holders) {
+                holderData.top10Holders.forEach(h => walletsToCheck.add(h.owner || h.address));
+            }
+            if (sniperData && sniperData.sniperWallets) {
+                sniperData.sniperWallets.forEach(s => walletsToCheck.add(s.address));
+            }
+            whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
+            if (whaleAnalysis.whales && holderData.top10Holders) {
+                const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
+                whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
+                whaleAnalysis.count = whaleAnalysis.whales.length;
+            }
+        } else {
+            whaleAnalysis = cachedEntry.whaleAnalysis;
         }
 
-
-        // Record usage (Only if new analysis)
-        if (!skipUsageRecord) {
-            await recordUsage(user.id, ca);
-        }
-
-        // Record scan for "Recent Scans" list
-        try {
-            await recordScan(user.id, {
-                address: ca,
-                name: tokenData.name,
-                symbol: tokenData.symbol,
-                imageUrl: tokenData.imageUrl
-            });
-        } catch (e) {
-            console.error('Failed to record scan:', e);
-        }
-
-        // Calculate graduation chance based on bonding curve and momentum
-        const graduationChance = calculateGraduationChance(bondingData, tokenData, holderData, bondingVelocity);
-
-        // Calculate entry point suggestion
-        const entryPoint = calculateEntryPoint(tokenData, bondingData, holderData, organicScore, isWinningProfile);
-
-        // Check if token is dead
-        const deadCoinStatus = checkDeadCoin(tokenData);
-
-        // Check for specific Rug Pull Risks
-        const rugStatus = checkRugStatus(tokenData, holderData, organicScore);
-
-        // --- SAFETY OVERRIDE (Critical Fix) ---
-        // If technical analysis confirms Dead or Rug, OVERRIDE any AI positivity
-        // This ensures "BUY" is never shown for rugs, even if AI hallucinates potential.
-        if (deadCoinStatus.isDead || rugStatus.riskLevel === 'CRITICAL') {
-            console.log('SAFETY OVERRIDE TRIGGERED: Token is Dead or Critical Risk');
-
-            const safetySummary = deadCoinStatus.isDead
-                ? deadCoinStatus.description
-                : "CRITICAL RUG RISK DETECTED. High insider holdings or liquidity issues.";
-
-            // Force overwrite aiAnalysis (whether it existed or not)
-            aiAnalysis = {
-                profitProbability: 2, // 2% chance
-                confidence: 'HIGH',
-                recommendation: 'AVOID',
-                entryScore: 1, // Lowest possible
-                riskLevel: 'EXTREME',
-                keyInsights: [
-                    ...(deadCoinStatus.isDead ? ['⛔ TOKEN IS DEAD (Zero Volume/Movement)'] : []),
-                    ...deadCoinStatus.signals,
-                    ...rugStatus.signals,
-                    "⚠️ SAFETY SYSTEM OVERRIDE: Technical indicators suggest staying away."
-                ],
-                summary: safetySummary
+        // UPDATE CACHE 
+        // We update the cache if it was invalid OR if we ran fresh premium data (so subsequent free calls might benefit? No, let's just update if invalid to keep simple)
+        // actually if we ran premium fresh, we might as well update the cache for everyone else to be fresh too.
+        if (!isCacheValid || isPremium) {
+            // If refreshing due to premium, we only update if we have full data. 
+            // bucketedData is reused if valid. logic holds.
+            global.analysisCache[ca] = {
+                timestamp: Date.now(),
+                data: bucketedData,
+                aiAnalysis,
+                whaleAnalysis,
+                devWalletData
             };
         }
 
-        // Advanced FOMO Metrics
+        // --- SAFETY CHECKS (Always run fresh on tokenData) ---
+        const deadCoinStatus = checkDeadCoin(tokenData);
+        const rugStatus = checkRugStatus(tokenData, holderData, organicScore);
+
+        // Security Override
+        if (deadCoinStatus.isDead || rugStatus.riskLevel === 'CRITICAL') {
+            aiAnalysis = {
+                profitProbability: 2,
+                confidence: 'HIGH',
+                recommendation: 'AVOID',
+                entryScore: 1,
+                riskLevel: 'EXTREME',
+                keyInsights: [...deadCoinStatus.signals, ...rugStatus.signals, "⛔ SAFETY OVERRIDE ACTIVE"],
+                summary: deadCoinStatus.description || "Critical Risk Detected."
+            };
+        }
+
+        // Record Usage
+        if (!skipUsageRecord && !isCacheValid) {
+            // Only charge credit if we actually ran a fresh analysis (cache miss)
+            // or maybe charge every time but lower cost? For now, charge every time 
+            // because "usage" implies viewing the data. 
+            // Actually, cost is high. Let's record usage every time for history, but maybe limits should be credit based?
+            // Keeping existing logic: recordUsage logs to DB.
+            await recordUsage(user.id, ca);
+            // Also record scan for history
+            try {
+                await recordScan(user.id, {
+                    address: ca, name: tokenData.name, symbol: tokenData.symbol, imageUrl: tokenData.imageUrl
+                });
+            } catch (e) { }
+        }
+
+
+        // Calculations
+        const graduationChance = calculateGraduationChance(bondingData, tokenData, holderData, bondingVelocity);
+
+        // Re-run Entry Point on LIVE token data (so price/mcap targets are fresh)
+        // But reusing Cached Holder/Bonding data
+        const entryPoint = calculateEntryPoint(tokenData, bondingData, holderData, organicScore, isWinningProfile);
         const velocity = checkVolumeVelocity(tokenData);
         const smartMoney = analyzeSmartMoney(holderData, tokenData, sniperData);
+        const uniqueBuyersCount = 0; // Disabled
 
-        // Update Entry Point with new logic
-        // entryPoint already calculated at line 190, but we need to re-calculate if we want to pass new params or just update the variable. 
-        // Actually, we declared `const entryPoint` at line 190. We should duplicate usage or just reuse.
-        // The previous edit inserted a new calculation. Remove the duplicate declaration.
-
-        // RE-ASSIGN instead of re-declare if needed, but `entryPoint` is const. 
-        // Better: Remove the first declaration at 190 if it's outdated, OR remove this second one if it's redundant.
-        // Step 1795 inserted lines 199-203.
-        // Original line 190: const entryPoint = calculateEntryPoint(...)
-        // Let's remove the second declaration and just update the first one's call site if needed, OR comment out the original.
-        // Actually, I'll delete the duplicate declaration block here.
-
-        // Build response
         const response = {
             success: true,
             token: {
-                name: tokenData.name,
-                symbol: tokenData.symbol,
-                address: ca,
-                imageUrl: tokenData.imageUrl || null,
-                price: tokenData.price,
-                marketCap: tokenData.marketCap,
-                volume24h: tokenData.volume24h,
-                volume1h: tokenData.volume1h || 0,
-                volume5m: tokenData.volume5m || 0,
-                priceChange5m: tokenData.priceChange5m || 0,
-                priceChange1h: tokenData.priceChange1h || 0,
-                priceChange24h: tokenData.priceChange24h || 0,
-                // Liquidity data
-                liquidity: tokenData.liquidity || 0,
-                liquidityRatio: tokenData.marketCap > 0
-                    ? Math.round((tokenData.liquidity / tokenData.marketCap) * 10000) / 100
-                    : 0,
-                // Age
-                ageHours: ageHours,
-                ageFormatted: formatAge(ageHours),
-                // Platform
-                dexId: tokenData.dexId,
-                pairAddress: tokenData.pairAddress,
-                isPumpFun: tokenData.isPumpFun
+                ...tokenData, // Live Data
+                liquidityRatio: tokenData.marketCap > 0 ? Math.round((tokenData.liquidity / tokenData.marketCap) * 10000) / 100 : 0,
+                ageFormatted: formatAge(ageHours)
             },
             metrics: {
                 buyCount: tokenData.buyCount,
@@ -326,25 +293,21 @@ export async function POST(request) {
                 isGraduated: bondingData.isGraduated,
                 estimatedToGraduation: bondingData.estimatedToGraduation
             },
-            // Security status (placeholder for future implementation)
             security: {
                 mintAuthorityRevoked: null,
                 freezeAuthorityDisabled: null,
                 lpLocked: null,
                 devHoldingPercent: null,
                 devSoldAll: null,
-                sniperCount: null,
                 sniperCount: smartMoney.sniperStatus.count,
                 isEstimated: true
             },
-            // Advanced Signals
             advanced: {
                 volumeVelocity: velocity,
                 smartMoney: smartMoney.smartMoneyFlow,
                 insiderStatus: smartMoney.insiderStatus,
                 sniperStatus: smartMoney.sniperStatus
             },
-            // Mechanics Card Data (Real Data)
             mechanics: {
                 devStatus: {
                     action: devWalletData.action || 'UNKNOWN',
@@ -352,12 +315,7 @@ export async function POST(request) {
                     balance: devWalletData.balance || 0,
                     isEstimated: devWalletData.isEstimated || false,
                     method: devWalletData.method || 'unknown',
-                    color: devWalletData.action === 'SOLD ALL' ? '#ef4444'
-                        : devWalletData.action === 'LIKELY SOLD' ? '#f97316'
-                            : devWalletData.action === 'HOLDING' ? '#22c55e'
-                                : devWalletData.action === 'LIKELY HOLDING' ? '#84cc16'
-                                    : devWalletData.action === 'HOLDING (RISK)' ? '#eab308'
-                                        : '#888'
+                    color: devWalletData.action === 'SOLD ALL' ? '#ef4444' : devWalletData.action === 'LIKELY SOLD' ? '#f97316' : devWalletData.action === 'HOLDING' ? '#22c55e' : devWalletData.action === 'LIKELY HOLDING' ? '#84cc16' : devWalletData.action === 'HOLDING (RISK)' ? '#eab308' : '#888'
                 },
                 snipers: {
                     count: sniperData.totalSnipers || 0,
@@ -366,20 +324,11 @@ export async function POST(request) {
                     isEstimated: sniperData.isEstimated || false,
                     riskLevel: sniperData.riskLevel || 'UNKNOWN'
                 },
-                curveVelocity: {
-                    value: bondingVelocity.toFixed(2),
-                    label: `+${bondingVelocity.toFixed(2)}%/min`
-                },
+                curveVelocity: { value: bondingVelocity.toFixed(2), label: `+${bondingVelocity.toFixed(2)}%/min` },
                 top1Holder: {
-                    percent: (holderData.top10Holders && holderData.top10Holders[0])
-                        ? parseFloat(holderData.top10Holders[0].percent)
-                        : 0,
-                    address: (holderData.top10Holders && holderData.top10Holders[0])
-                        ? holderData.top10Holders[0].address
-                        : null,
-                    isRisky: (holderData.top10Holders && holderData.top10Holders[0])
-                        ? parseFloat(holderData.top10Holders[0].percent) > 15
-                        : false
+                    percent: (holderData.top10Holders && holderData.top10Holders[0]) ? parseFloat(holderData.top10Holders[0].percent) : 0,
+                    address: (holderData.top10Holders && holderData.top10Holders[0]) ? holderData.top10Holders[0].address : null,
+                    isRisky: (holderData.top10Holders && holderData.top10Holders[0]) ? parseFloat(holderData.top10Holders[0].percent) > 15 : false
                 },
                 whales: {
                     count: whaleAnalysis.count || 0,
@@ -387,7 +336,6 @@ export async function POST(request) {
                     hasWhales: (whaleAnalysis.count || 0) > 0
                 }
             },
-            // Token Safety (Burn, Renounced, Freeze Revoked)
             tokenSafety: {
                 burnPercent: tokenAuthorityData.burnPercent || 0,
                 isRenounced: tokenAuthorityData.isRenounced || false,
@@ -395,11 +343,8 @@ export async function POST(request) {
                 isEstimated: tokenAuthorityData.isEstimated || false,
                 allSafe: (tokenAuthorityData.isRenounced === true && tokenAuthorityData.isFreezeRevoked === true)
             },
-            // Entry Point Suggestion
             entryPoint: entryPoint,
-            // Dead Coin Detection
             tokenHealth: deadCoinStatus,
-            // Rug Detection
             rugRisk: rugStatus,
             analysis: aiAnalysis ? {
                 profitProbability: aiAnalysis.profitProbability || aiAnalysis.score,
@@ -417,64 +362,54 @@ export async function POST(request) {
                 entryScore: entryPoint.score,
                 riskLevel: entryPoint.riskLevel || 'HIGH',
                 graduationChance: graduationChance,
-                keyInsights: deadCoinStatus.signals.length > 0
-                    ? deadCoinStatus.signals
-                    : generateBasicInsights(tokenData, holderData, organicScore, bondingVelocity),
+                keyInsights: deadCoinStatus.signals.length > 0 ? deadCoinStatus.signals : generateBasicInsights(tokenData, holderData, organicScore, bondingVelocity),
                 summary: deadCoinStatus.description
             },
-            chart: ohlcvData,
+            chart: [],
             user: {
                 tier: user.tier,
                 remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
-                remainingTrial: user.tier === 'free' ? (trialStatus?.remaining || 0) : 'unlimited',
+                remainingTrial: user.tier === 'free' ? (user.trialStatus?.remaining || 0) : 'unlimited',
                 credits: user.credits
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            isCached: isCacheValid
         };
 
-        // SYNC LOGIC: Resolve conflicts between AI Probability and Entry Point Algorithm
-        // HIERARCHY: Safety > High Confidence AI > Standard Metrics
-
+        // --- 85% RULE ENFORCEMENT & LOGIC SYNC ---
         // 1. If AI is extremely confident (>85%), it overrides conservative technical wait signals
-        if (aiAnalysis && aiAnalysis.profitProbability > 85 && !deadCoinStatus.isDead && rugStatus.riskLevel !== 'CRITICAL') {
+        if (response.analysis.profitProbability >= 85 && !deadCoinStatus.isDead && rugStatus.riskLevel !== 'CRITICAL') {
             console.log('HIGH CONFIDENCE OVERRIDE: AI Probability > 85%, Forcing BUY');
 
             // Force BUY recommendations
-            aiAnalysis.recommendation = 'BUY';
+            response.analysis.recommendation = 'BUY';
             response.entryPoint.verdict = 'ENTER NOW';
             response.entryPoint.shouldEnter = true;
 
             // Set Target Mcap to CURRENT (Don't wait for dip)
             response.entryPoint.targetMcap = tokenData.marketCap;
-            response.entryPoint.score = Math.max(response.entryPoint.score, 9); // Ensure high score
+            response.entryPoint.score = Math.max(response.entryPoint.score, 9);
 
-            // Adjust Risk if it was artificially high due to missing signals
+            // Adjust Risk
             if (response.analysis.riskLevel === 'HIGH' && rugStatus.riskLevel === 'LOW') {
-                response.analysis.riskLevel = 'MEDIUM'; // Downgrade risk if only technicals were weak
+                response.analysis.riskLevel = 'MEDIUM';
             }
         }
 
-        // 2. Standard Sync: If Entry says ENTER but Analysis says WAIT
-        else if (response.entryPoint.shouldEnter) {
-            if (response.analysis.recommendation !== 'BUY') {
-                if (response.analysis.profitProbability > 60) {
-                    response.analysis.recommendation = 'BUY'; // Upgrade Analysis to match Technicals
-                } else {
-                    response.entryPoint.verdict = 'WAIT FOR MOMENTUM'; // Downgrade Entry to match AI caution
-                    response.entryPoint.shouldEnter = false;
-                }
+        // 2. Standard Sync: If Entry says BUY but Analysis says WAIT
+        else if (response.entryPoint.shouldEnter && response.analysis.recommendation !== 'BUY') {
+            if (response.analysis.profitProbability > 60) {
+                response.analysis.recommendation = 'BUY';
+            } else {
+                response.entryPoint.verdict = 'WAIT FOR MOMENTUM';
+                response.entryPoint.shouldEnter = false;
             }
         }
 
         // 3. Ensure Target Market Cap is NEVER null
         if (!response.entryPoint.targetMcap) {
-            response.entryPoint.targetMcap = tokenData.marketCap;
+            response.entryPoint.targetMcap = Math.round(tokenData.marketCap * 0.9); // Default fall back
         }
-
-        // 4. Update Analysis Object in Response
-        response.analysis.recommendation = aiAnalysis ? aiAnalysis.recommendation : response.analysis.recommendation;
-        response.analysis.riskLevel = aiAnalysis ? aiAnalysis.riskLevel : response.analysis.riskLevel;
-
 
         return NextResponse.json(response);
 

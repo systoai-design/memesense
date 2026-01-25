@@ -20,7 +20,8 @@ import {
     ChevronLeft,
     Copy,
     ExternalLink,
-    Lock
+    Lock,
+    RefreshCcw
 } from 'lucide-react';
 import styles from './page.module.css';
 import ProfitabilityGauge from '@/components/ProfitabilityGauge';
@@ -91,7 +92,31 @@ export default function AnalyzePage() {
                 throw new Error(result.message || result.error || 'Analysis failed');
             }
 
-            setData(result);
+            // LOCK-IN LOGIC:
+            // If refreshing (isRefresh=true), we ONLY update live market data.
+            // We KEEP the original AI Analysis, Verdict, and Entry Point locked.
+            // Unless the user manually triggered a fresh analysis (which we can assume implies a full unlock, 
+            // but currently 'isRefresh' covers both auto and strict re-fetches. 
+            // Actually, we need to respect the original plan: Auto-refresh (polling) = Locked. Manual = Unlocked.
+            // Currently fetchAnalysis(true) is called by interval. Manual button should call fetchAnalysis(false).
+
+            if (isRefresh) {
+                setData(prevData => {
+                    if (!prevData) return result;
+                    return {
+                        ...prevData,
+                        token: result.token,
+                        metrics: result.metrics,
+                        bondingCurve: result.bondingCurve,
+                        mechanics: { ...prevData.mechanics, curveVelocity: result.mechanics.curveVelocity }, // Update specific live mechanics
+                        // Keep locked analysis & entry point
+                        timestamp: new Date().toISOString()
+                    };
+                });
+            } else {
+                setData(result);
+            }
+
             setLastUpdated(new Date());
         } catch (err) {
             if (err.name === 'AbortError') {
@@ -119,7 +144,7 @@ export default function AnalyzePage() {
 
         const interval = setInterval(() => {
             fetchAnalysis(true);
-        }, 10000); // Refresh every 10 seconds
+        }, 30000); // Optimized to 30 seconds to save API costs
 
         return () => clearInterval(interval);
     }, [ca, loading, fetchAnalysis]);
@@ -224,9 +249,29 @@ export default function AnalyzePage() {
                         </span>
                     )}
                     {lastUpdated && (
-                        <span className={styles.lastUpdated}>
-                            Updated {lastUpdated.toLocaleTimeString()}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className={styles.lastUpdated}>
+                                Updated {lastUpdated.toLocaleTimeString()}
+                            </span>
+                            <button
+                                onClick={() => fetchAnalysis(false)}
+                                style={{
+                                    background: 'none',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '4px',
+                                    color: '#aaa',
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    fontSize: '0.7rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                                title="Run Full Re-Analysis (Unlocks Verdict)"
+                            >
+                                <RefreshCcw size={10} /> Refresh Logic
+                            </button>
+                        </div>
                     )}
                 </div>
                 <div className={styles.headerRight}>
@@ -301,28 +346,59 @@ export default function AnalyzePage() {
                                     height: '48px',
                                     borderRadius: '50%',
                                     objectFit: 'cover',
-                                    border: '2px solid rgba(255,255,255,0.15)',
-                                    flexShrink: 0
+                                    border: '2px solid rgba(255,255,255,0.1)'
                                 }}
                             />
                         ) : (
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '50%',
-                                background: 'rgba(255,255,255,0.05)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '20px',
-                                border: '2px solid rgba(255,255,255,0.1)',
-                                flexShrink: 0
-                            }}>🪙</div>
+                            <div className={styles.tokenIconPlaceholder}>
+                                <Users size={24} color="#666" />
+                            </div>
                         )}
-                        <h1 className={styles.tokenName} style={{ margin: 0 }}>
-                            {token.name}
-                            <span className={styles.tokenSymbol}>${token.symbol}</span>
-                        </h1>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <h1 style={{ margin: 0, fontSize: '1.8rem' }}>{token.name}</h1>
+
+                                {/* Header Bonding Curve (Live) */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '4px 8px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    <div style={{
+                                        width: '60px',
+                                        height: '6px',
+                                        background: '#333',
+                                        borderRadius: '3px',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            width: `${Math.min(bondingCurve.progress, 100)}%`,
+                                            height: '100%',
+                                            background: bondingCurve.isGraduated ? '#ccff00' : 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
+                                        }}></div>
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#ccc' }}>
+                                        {bondingCurve.progress.toFixed(0)}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div className={styles.tokenMeta}>
+                                <span className={styles.symbol}>${token.symbol}</span>
+                                <span className={styles.pairAddress}>
+                                    {token.address.slice(0, 4)}...{token.address.slice(-4)}
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(token.address)}
+                                        className={styles.copyBtn}
+                                    >
+                                        <Copy size={12} />
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                     <div className={styles.tokenMeta}>
                         <div className={styles.tokenAddress}>
@@ -407,6 +483,137 @@ export default function AnalyzePage() {
                                 Confidence: <strong>{analysis.confidence}</strong>
                             </div>
                         </div>
+
+                        {/* NEW: Trade Setup Card */}
+                        {data.entryPoint && (
+                            <div style={{
+                                marginTop: '20px',
+                                padding: '16px',
+                                borderRadius: '12px',
+                                background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px'
+                            }}>
+                                <div style={{
+                                    fontSize: '0.75rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px',
+                                    color: '#666',
+                                    fontWeight: 'bold',
+                                    marginBottom: '4px'
+                                }}>
+                                    Trade Setup
+                                </div>
+                                {/* Row 1: Entry */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '4px' }}>Target Entry</span>
+                                        <span style={{
+                                            fontSize: '1.4rem',
+                                            fontWeight: '800',
+                                            color: data.entryPoint.verdict === 'ENTER NOW' ? '#22c55e' : '#ccc',
+                                            letterSpacing: '-0.5px'
+                                        }}>
+                                            ${data.entryPoint.targetMcap ? (data.entryPoint.targetMcap / 1000).toFixed(1) + 'k' : '---'}
+                                        </span>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>
+                                            Current: <span style={{ color: '#aaa', marginLeft: '4px' }}>${(token.marketCap / 1000).toFixed(1)}k</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Exit & Risk */}
+                                <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateColumns: '1fr 1fr', 
+                                    gap: '20px',
+                                    paddingTop: '4px'
+                                }}>
+                                    {/* Left Column: Upside */}
+                                    <div>
+                                        <span style={{ fontSize: '0.8rem', color: '#888', display: 'block', marginBottom: '2px' }}>
+                                            Target Exit
+                                        </span>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ccff00', display: 'block' }}>
+                                            {(() => {
+                                                if (!data.entryPoint.targetMcap) return '---';
+                                                
+                                                let exitTarget = 0;
+                                                const mcap = data.entryPoint.targetMcap;
+                                                
+                                                if (!bondingCurve.isGraduated) {
+                                                    exitTarget = bondingCurve.graduationThreshold || 69000;
+                                                } else if (mcap < 1000000) { // Under 1M
+                                                    exitTarget = mcap * 5; // 5x
+                                                } else if (mcap < 10000000) { // Under 10M
+                                                    exitTarget = mcap * 2; // 2x
+                                                } else { // Over 10M
+                                                    exitTarget = mcap * 1.3; // 30% Scalp
+                                                }
+
+                                                return `$${(exitTarget/1000).toFixed(1)}k`;
+                                            })()}
+                                        </span>
+                                        <div style={{ 
+                                            display: 'inline-block',
+                                            marginTop: '4px',
+                                            padding: '2px 6px',
+                                            background: 'rgba(204, 255, 0, 0.15)',
+                                            borderRadius: '4px',
+                                            fontSize: '0.75rem', 
+                                            color: '#ccff00', 
+                                            fontWeight: 'bold' 
+                                        }}>
+                                            {(() => {
+                                                 if (!data.entryPoint.targetMcap) return '';
+                                                 
+                                                 const mcap = data.entryPoint.targetMcap;
+                                                 let label = '';
+                                                 
+                                                 if (!bondingCurve.isGraduated) {
+                                                     label = 'Graduation';
+                                                 } else if (mcap < 1000000) {
+                                                     label = '5x Target';
+                                                 } else if (mcap < 10000000) {
+                                                     label = '2x Target';
+                                                 } else {
+                                                     label = '+30% Scalp';
+                                                 }
+
+                                                 return label.toUpperCase();
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Downside */}
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#888', display: 'block', marginBottom: '2px' }}>
+                                            Max Risk
+                                        </span>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ef4444', display: 'block' }}>
+                                            {data.entryPoint.targetMcap ? `$${(data.entryPoint.targetMcap * 0.7 / 1000).toFixed(1)}k` : '---'}
+                                        </span>
+                                        <div style={{ 
+                                            display: 'inline-block',
+                                            marginTop: '4px',
+                                            padding: '2px 6px',
+                                            background: 'rgba(239, 68, 68, 0.15)',
+                                            borderRadius: '4px',
+                                            fontSize: '0.75rem', 
+                                            color: '#ef4444', 
+                                            fontWeight: 'bold' 
+                                        }}>
+                                            -30% STOP LOSS
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className={`${styles.riskBadge} ${getRiskClass(analysis.riskLevel)}`}>
                             Risk Level: {analysis.riskLevel}
                         </div>
@@ -417,10 +624,15 @@ export default function AnalyzePage() {
                         <h2>Key Metrics</h2>
                         <div className={styles.metricsGrid}>
                             <MetricsCard
-                                label="Holders / 24h Buys"
-                                value={`${(holders.isEstimated && holders.total === 5000) ? '5,000+' : holders.total?.toLocaleString() || '0'} / ${metrics.buyCount?.toLocaleString() || '0'}`}
+                                label="Holders (Top 10)"
+                                value={(holders.isEstimated && holders.total === 5000) ? '5,000+' : holders.total?.toLocaleString() || '0'}
                                 icon={<Users size={18} color="var(--primary)" />}
                                 trend={holders.total > 200 ? 'up' : null}
+                            />
+                            <MetricsCard
+                                label="24h Volume / Buys"
+                                value={`$${(token.volume24h / 1000).toFixed(1)}K / ${metrics.buyCount?.toLocaleString() || '0'}`}
+                                icon={<Wallet size={18} color="var(--text-secondary)" />}
                             />
                             <MetricsCard
                                 label="Buy Ratio"
@@ -428,11 +640,6 @@ export default function AnalyzePage() {
                                 icon={<Activity size={18} color={metrics.buyRatio > 55 ? 'var(--success)' : 'var(--danger)'} />}
                                 trend={metrics.buyRatio > 55 ? 'up' : metrics.buyRatio < 45 ? 'down' : null}
                                 color={metrics.buyRatio > 55 ? 'green' : metrics.buyRatio < 45 ? 'red' : null}
-                            />
-                            <MetricsCard
-                                label="24h Volume"
-                                value={`$${(token.volume24h / 1000).toFixed(1)}K`}
-                                icon={<Wallet size={18} color="var(--text-secondary)" />}
                             />
                             <MetricsCard
                                 label="FOMO Grade"
@@ -472,44 +679,7 @@ export default function AnalyzePage() {
                         </div>
                     </section>
 
-                    {/* 3. Bonding Curve Progress */}
-                    <section className={`card ${styles.bondingCard}`}>
-                        <h2>Bonding Curve Progress</h2>
-                        <div className={styles.bondingProgress}>
-                            <div className={styles.progressCircle}>
-                                <svg viewBox="0 0 100 100">
-                                    <circle
-                                        className={styles.progressBg}
-                                        cx="50" cy="50" r="45"
-                                        fill="none"
-                                        strokeWidth="8"
-                                    />
-                                    <circle
-                                        className={styles.progressFill}
-                                        cx="50" cy="50" r="45"
-                                        fill="none"
-                                        strokeWidth="8"
-                                        strokeDasharray={`${2 * Math.PI * 45}`}
-                                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - (bondingCurve.progress / 100))}`}
-                                        transform="rotate(-90 50 50)"
-                                    />
-                                    <text x="50" y="50" textAnchor="middle" dy="0.3em" className={styles.progressValue}>
-                                        {bondingCurve.progress.toFixed(1)}%
-                                    </text>
-                                </svg>
-                            </div>
-                            <div className={styles.bondingInfo}>
-                                <div className={styles.toGraduation}>
-                                    To Graduation: <strong>${(bondingCurve.estimatedToGraduation / 1000).toFixed(1)}k</strong>
-                                </div>
-                                {!bondingCurve.isGraduated && (
-                                    <div className={styles.graduationChance}>
-                                        Chance of Graduation: <strong>{analysis.graduationChance}%</strong>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </section>
+
                 </div>
 
                 {/* Right Column - Risk & Safety (40%) */}
