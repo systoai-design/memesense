@@ -467,7 +467,15 @@ export default function AppHome() {
                                                     : (scan.symbol || 'SOL')
                                                 }
                                                 <span style={{ margin: '0 6px', opacity: 0.5 }}>•</span>
-                                                {Math.max(0, Math.round((Date.now() - new Date(scan.created_at.replace(' ', 'T') + 'Z')) / 60000))}m ago
+                                                {(() => {
+                                                    const dateStr = scan.created_at.includes('T') ? scan.created_at : scan.created_at.replace(' ', 'T') + 'Z';
+                                                    const diffMs = Date.now() - new Date(dateStr).getTime();
+                                                    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+                                                    if (diffMins < 60) return `${diffMins}m ago`;
+                                                    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+                                                    return `${Math.floor(diffMins / 1440)}d ago`;
+                                                })()}
                                             </div>
                                         </div>
                                     </div>

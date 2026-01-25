@@ -70,7 +70,17 @@ export default function ProfitPage() {
                 console.error("User rejected connection", err);
             }
         } else {
-            window.open('https://phantom.app/', '_blank');
+            // DEEP LINKING LOGIC
+            // If on mobile and no provider (standard browser), deep link to Phantom App
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                const currentUrl = window.location.href;
+                const deepLink = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(currentUrl)}`;
+                window.location.href = deepLink;
+            } else {
+                window.open('https://phantom.app/', '_blank');
+            }
         }
     };
     const [searchInput, setSearchInput] = useState('');
@@ -99,6 +109,9 @@ export default function ProfitPage() {
     const [isPremium, setIsPremium] = useState(true);
     const [debugInfo, setDebugInfo] = useState(null);
     const [timeWindow, setTimeWindow] = useState('7d'); // Default to 7d
+    const [historyFilter, setHistoryFilter] = useState('ALL');
+    const [sortField, setSortField] = useState('date'); // 'date', 'pnl', 'roi'
+    const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
 
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
@@ -518,97 +531,166 @@ export default function ProfitPage() {
                             </div>
                         </div>
 
+                        {/* 4. COPY STRATEGY */}
+                        <div className={styles.metricCard}>
+                            <div className={styles.cardTitle}>
+                                <Brain size={18} /> Copy Strategy
+                            </div>
+                            <div className={styles.statRow}>
+                                <span className={styles.statLabel}>Consistency Rating</span>
+                                <span className={styles.statValue} style={{ color: (data.summary[timeWindow].consistencyRating || 0) > 70 ? '#00d47e' : (data.summary[timeWindow].consistencyRating || 0) > 40 ? 'gold' : '#ff4d4d' }}>
+                                    {(data.summary[timeWindow].consistencyRating || 0).toFixed(0)}/100
+                                </span>
+                            </div>
+                            <div className={styles.statRow}>
+                                <span className={styles.statLabel}>Diamond Hands</span>
+                                <span className={styles.statValue} style={{ color: '#a366ff' }}>
+                                    {(data.summary[timeWindow].diamondHandRating || 0).toFixed(0)}/100
+                                </span>
+                            </div>
+                            <div className={styles.statRow}>
+                                <span className={styles.statLabel}>Sniper Score</span>
+                                <span className={styles.statValue} style={{ opacity: 0.5 }}>
+                                    {data.summary[timeWindow].sniperEfficiency !== null ? data.summary[timeWindow].sniperEfficiency + '%' : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+
                     </div>
                 )}
 
                 {/* Trades Table */}
                 <div className={styles.tableCard}>
-                    <h3>Position History</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3>Position History</h3>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            {['ALL', 'WINS', 'LOSSES', 'OPEN'].map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setHistoryFilter(f)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '6px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        border: 'none',
+                                        background: historyFilter === f ? (f === 'WINS' ? '#00d47e' : f === 'LOSSES' ? '#ff4d4d' : '#ccff00') : 'rgba(255,255,255,0.05)',
+                                        color: historyFilter === f ? '#000' : '#888',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className={styles.tableHeader}>
-                        <span>Status</span>
+                        <span onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
+                            Status {sortField === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}
+                        </span>
                         <span>Token</span>
-                        <span>PnL (ROI)</span>
+                        <span onClick={() => { setSortField('pnl'); setSortDirection(sortField === 'pnl' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
+                            PnL (ROI) {sortField === 'pnl' && (sortDirection === 'asc' ? '▲' : '▼')}
+                        </span>
                         <span>Held</span>
                         <span>Trades (B/S)</span>
-                        <span>Hold Time</span>
+                        <span onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
+                            Hold Time {sortField === 'date' && (sortDirection === 'asc' ? '▲' : '▼')}
+                        </span>
                     </div>
 
                     <div className={styles.tableBody}>
-                        {data?.summary?.[timeWindow]?.details?.map((trade, i) => {
-                            const meta = data.tokenInfo?.[trade.mint] || {};
-                            // Use metadata if available, otherwise fallback to trade properties (though they are raw now)
-                            const symbol = meta.symbol || 'UNKNOWN';
-                            const name = meta.name || trade.mint.slice(0, 8);
-                            const image = meta.image || '';
+                        {data?.summary?.[timeWindow]?.details
+                            ?.filter(trade => {
+                                if (historyFilter === 'ALL') return true;
+                                if (historyFilter === 'WINS') return trade.pnl > 0;
+                                if (historyFilter === 'LOSSES') return trade.pnl < 0;
+                                if (historyFilter === 'OPEN') return trade.status === 'OPEN';
+                                return true;
+                            })
+                            .sort((a, b) => {
+                                let valA = a[sortField];
+                                let valB = b[sortField];
 
-                            // Calculate simplified Held Amount (approx)
-                            const held = trade.buySol > 0 ? ((trade.buySol - trade.sellSol) / trade.buySol * 100) : 0;
-                            // Wait, trade object has raw `buySol` and `sellSol`. It doesn't have token amounts easily without re-calc.
-                            // But `trade-analysis` did calculate `totalBuyTokens` inside loop but didn't export it in `details` array?
-                            // Let's check `lib/trade-analysis.js`. 
-                            // Ah, I need to check if `details` has token amounts.
-                            // Looking at `trade-analysis.js` -> `details` pushes buySol, sellSol. 
-                            // It does NOT push `tokenAmount`.
-                            // I should just show "Open" or "Closed" or PnL. "Values" column usually means USD value.
-                            // Without prices, "Held" is hard.
-                            // But I can show "Cost Basis" or "Remaining %".
-                            // Let's just show "Held" as "Open" badge or empty.
-                            // Actually, I'll stick to PnL and just add the `tokenInfo` lookup logic for now. 
-                            // AND fix the data source to `summary[timeWindow]`.
+                                // Special handling for dates/duration
+                                if (sortField === 'date') {
+                                    // Use lastSellTime (most recent activity) or firstBuyTime
+                                    valA = a.lastSellTime || a.firstBuyTime || 0;
+                                    valB = b.lastSellTime || b.firstBuyTime || 0;
+                                }
 
-                            return (
-                                <div key={i} className={styles.tableRow}>
-                                    <div>
-                                        <span className={`${styles.statusBadge} ${trade.status === 'CLOSED' ? styles.statusClosed :
-                                            trade.status === 'OPEN' ? styles.statusOpen :
-                                                styles.statusPartial
-                                            }`}>
-                                            {trade.status === 'PARTIAL_HISTORY' ? 'PARTIAL' : trade.status}
-                                        </span>
-                                    </div>
-                                    <div className={styles.tokenCell}>
-                                        <Link href={`/analyze/${trade.mint}`} className={styles.tokenLink}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                {image ? (
-                                                    <img src={image} alt={symbol} style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                                                ) : (
-                                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <DollarSign size={14} color="#888" />
+                                if (sortField === 'status') {
+                                    // Custom order: OPEN > CLOSED > PARTIAL
+                                    const statusOrder = { 'OPEN': 3, 'CLOSED': 1, 'PARTIAL_HISTORY': 0 };
+                                    valA = statusOrder[a.status] || 0;
+                                    valB = statusOrder[b.status] || 0;
+                                }
+
+                                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                                return 0;
+                            })
+                            .map((trade, i) => {
+                                const meta = data.tokenInfo?.[trade.mint] || {};
+                                const symbol = meta.symbol || 'UNKNOWN';
+                                const name = meta.name || trade.mint.slice(0, 8);
+                                const image = meta.image || '';
+
+                                return (
+                                    <div key={i} className={styles.tableRow}>
+                                        <div>
+                                            <span className={`${styles.statusBadge} ${trade.status === 'CLOSED' ? styles.statusClosed :
+                                                trade.status === 'OPEN' ? styles.statusOpen :
+                                                    styles.statusPartial
+                                                }`}>
+                                                {trade.status === 'PARTIAL_HISTORY' ? 'PARTIAL' : trade.status}
+                                            </span>
+                                        </div>
+                                        <div className={styles.tokenCell}>
+                                            <Link href={`/analyze/${trade.mint}`} className={styles.tokenLink}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                    {image ? (
+                                                        <img src={image} alt={symbol} style={{ width: 32, height: 32, borderRadius: '50%' }} />
+                                                    ) : (
+                                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <DollarSign size={14} color="#888" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, color: 'white' }}>{symbol}</div>
+                                                        <div className={styles.tokenMint}>{name}</div>
                                                     </div>
-                                                )}
-                                                <div>
-                                                    <div style={{ fontWeight: 700, color: 'white' }}>{symbol}</div>
-                                                    <div className={styles.tokenMint}>{name}</div>
                                                 </div>
-                                            </div>
-                                        </Link>
-                                    </div>
-                                    <div className={styles.pnlCell}>
-                                        <span className={trade.pnl >= 0 ? styles.positive : styles.negative} style={{ fontWeight: 700 }}>
-                                            {Number(trade.pnl).toFixed(3)} SOL
+                                            </Link>
+                                        </div>
+                                        <div className={styles.pnlCell}>
+                                            <span className={trade.pnl >= 0 ? styles.positive : styles.negative} style={{ fontWeight: 700 }}>
+                                                {Number(trade.pnl).toFixed(3)} SOL
+                                            </span>
+                                            <span className={trade.roi >= 0 ? styles.positive : styles.negative} style={{ fontSize: 12 }}>
+                                                ({Number(trade.roi).toFixed(1)}%)
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#ccc' }}>
+                                            {trade.status === 'OPEN' ? 'Holding' : '-'}
+                                        </div>
+                                        <span style={{ color: '#ccc' }}>
+                                            {trade.buyCount} / {trade.sellCount}
                                         </span>
-                                        <span className={trade.roi >= 0 ? styles.positive : styles.negative} style={{ fontSize: 12 }}>
-                                            ({Number(trade.roi).toFixed(1)}%)
+                                        <span>
+                                            {trade.holdTime ? (trade.holdTime / 60000 < 60 ? Math.round(trade.holdTime / 60000) + 'm' : Math.round(trade.holdTime / 3600000) + 'h') : '-'}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: 13, color: '#ccc' }}>
-                                        {trade.status === 'OPEN' ? 'Holding' : '-'}
-                                    </div>
-                                    <span style={{ color: '#ccc' }}>
-                                        {trade.buyCount} / {trade.sellCount}
-                                    </span>
-                                    <span>
-                                        {Math.round(trade.duration / 60000)}m
-                                    </span>
-                                </div>
-                            );
-                        })}
-                        {(!data?.summary?.[timeWindow]?.details || data.summary[timeWindow].details.length === 0) && (
-                            <div className={styles.emptyState}>No positions found in recent history.</div>
-                        )}
+                                );
+                            })}
                     </div>
+                    {(!data?.summary?.[timeWindow]?.details || data.summary[timeWindow].details.length === 0) && (
+                        <div className={styles.emptyState}>No positions found in recent history.</div>
+                    )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
