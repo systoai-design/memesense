@@ -18,6 +18,7 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
     const [status, setStatus] = useState('idle');
     const [errorMessage, setErrorMessage] = useState(null);
     const [plan, setPlan] = useState('lifetime');
+    const [userTier, setUserTier] = useState('FREE');
 
     const PRICES = {
         monthly: 0.5,
@@ -34,8 +35,11 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                     body: JSON.stringify({ walletAddress })
                 });
                 const data = await res.json();
-                if (data.success && data.user.tier === 'PREMIUM') {
-                    setStatus('active');
+                if (data.success) {
+                    setUserTier(data.user.tier);
+                    if (data.user.tier === 'PREMIUM' || data.user.tier === 'TRIAL') {
+                        setStatus('active');
+                    }
                 }
             } catch (e) {
                 console.error("Failed to check status", e);
@@ -287,54 +291,62 @@ export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
                 </p>
 
                 {/* Trial Activation Option */}
-                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <p style={{ fontSize: '0.9rem', marginBottom: '12px', color: '#ccff00' }}>Not ready to commit?</p>
-                    <button
-                        onClick={async () => {
-                            if (loading) return;
-                            setLoading(true);
-                            setErrorMessage(null);
-                            try {
-                                const deviceId = localStorage.getItem('memesense_device_id');
-                                const res = await fetch('/api/user/trial', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ walletAddress, deviceId })
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                    setStatus('success');
-                                    setTimeout(() => {
-                                        onSuccess();
-                                        onClose();
-                                    }, 1500);
-                                } else {
-                                    throw new Error(data.error || 'Trial activation failed');
+                {userTier === 'FREE' && (
+                    <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                        <p style={{ fontSize: '0.9rem', marginBottom: '12px', color: '#ccff00' }}>Not ready to commit?</p>
+                        <button
+                            onClick={async () => {
+                                if (loading) return;
+                                setLoading(true);
+                                setErrorMessage(null);
+                                try {
+                                    const deviceId = localStorage.getItem('memesense_device_id');
+                                    const res = await fetch('/api/user/trial', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ walletAddress, deviceId })
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        setStatus('success');
+                                        setTimeout(() => {
+                                            onSuccess();
+                                            onClose();
+                                        }, 1500);
+                                    } else {
+                                        throw new Error(data.error || 'Trial activation failed');
+                                    }
+                                } catch (e) {
+                                    setErrorMessage(e.message);
+                                    setStatus('error');
+                                } finally {
+                                    setLoading(false);
                                 }
-                            } catch (e) {
-                                setErrorMessage(e.message);
-                                setStatus('error');
-                            } finally {
-                                setLoading(false);
-                            }
-                        }}
-                        className="btn"
-                        disabled={loading}
-                        style={{
-                            background: 'rgba(204, 255, 0, 0.1)',
-                            border: '1px solid #ccff00',
-                            color: '#ccff00',
-                            padding: '10px 20px',
-                            width: '100%',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Start 3-Day Free Trial
-                    </button>
-                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '8px' }}>
-                        No credit card required. One-time use only.
-                    </p>
-                </div>
+                            }}
+                            className="btn"
+                            disabled={loading}
+                            style={{
+                                background: 'rgba(204, 255, 0, 0.1)',
+                                border: '1px solid #ccff00',
+                                color: '#ccff00',
+                                padding: '10px 20px',
+                                width: '100%',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Start 3-Day Free Trial
+                        </button>
+                        <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '8px' }}>
+                            No credit card required. One-time use only.
+                        </p>
+                    </div>
+                )}
+
+                {userTier === 'TRIAL' && (
+                    <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
+                        <p style={{ color: '#ccff00', fontWeight: 'bold' }}>🎁 3-Day Trial Active</p>
+                    </div>
+                )}
             </div>
         </div>
     );

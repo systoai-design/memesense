@@ -355,23 +355,31 @@ export default function UpgradePage() {
                             </button>
                         )}
 
-                        {/* TRIAL BUTTON MOVED HERE */}
-                        <button
-                            onClick={handleTrial}
-                            disabled={loading}
-                            style={{
-                                marginTop: 15,
-                                background: 'transparent',
-                                color: '#888',
-                                border: 'none',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                textDecoration: 'underline',
-                                width: '100%'
-                            }}
-                        >
-                            Or start a 3-day free trial
-                        </button>
+                        {/* TRIAL BUTTON - Only show if truly FREE */}
+                        {userTier === 'FREE' && (
+                            <button
+                                onClick={handleTrial}
+                                disabled={loading}
+                                style={{
+                                    marginTop: 15,
+                                    background: 'transparent',
+                                    color: '#888',
+                                    border: 'none',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    width: '100%'
+                                }}
+                            >
+                                Or start a 3-day free trial
+                            </button>
+                        )}
+
+                        {userTier === 'TRIAL' && (
+                            <p style={{ marginTop: 15, color: '#ccff00', fontSize: '13px', fontWeight: 'bold' }}>
+                                🎁 3-Day Trial Active
+                            </p>
+                        )}
                     </div>
                 </div>
 
