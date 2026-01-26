@@ -1,3 +1,5 @@
+export const maxDuration = 60; // Allow 60 seconds for profit analysis
+
 import { NextResponse } from 'next/server';
 import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';

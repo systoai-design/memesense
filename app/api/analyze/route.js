@@ -4,6 +4,9 @@
  * Body: { ca: string, deviceId: string }
  */
 
+
+export const maxDuration = 60; // Allow 60 seconds for heavy analysis
+
 import { NextResponse } from 'next/server';
 
 // Import modules
