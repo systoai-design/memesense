@@ -37,10 +37,13 @@ export default function AnalyzePage() {
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [walletAddress, setWalletAddress] = useState(null);
+    const [isWalletInitialized, setIsWalletInitialized] = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
 
     useEffect(() => {
-        setWalletAddress(localStorage.getItem('memesense_wallet'));
+        const storedWallet = localStorage.getItem('memesense_wallet');
+        setWalletAddress(storedWallet);
+        setIsWalletInitialized(true);
     }, []);
 
     const handleDisconnect = async () => {
@@ -93,13 +96,6 @@ export default function AnalyzePage() {
             }
 
             // LOCK-IN LOGIC:
-            // If refreshing (isRefresh=true), we ONLY update live market data.
-            // We KEEP the original AI Analysis, Verdict, and Entry Point locked.
-            // Unless the user manually triggered a fresh analysis (which we can assume implies a full unlock, 
-            // but currently 'isRefresh' covers both auto and strict re-fetches. 
-            // Actually, we need to respect the original plan: Auto-refresh (polling) = Locked. Manual = Unlocked.
-            // Currently fetchAnalysis(true) is called by interval. Manual button should call fetchAnalysis(false).
-
             if (isRefresh) {
                 setData(prevData => {
                     if (!prevData) return result;
@@ -133,12 +129,12 @@ export default function AnalyzePage() {
         }
     }, [ca, walletAddress]);
 
-    // Initial fetch
+    // Initial fetch - Only when wallet is checked
     useEffect(() => {
-        if (ca) {
+        if (ca && isWalletInitialized) {
             fetchAnalysis(false);
         }
-    }, [ca, fetchAnalysis]);
+    }, [ca, fetchAnalysis, isWalletInitialized]);
 
     // Auto-refresh every 10 seconds
     useEffect(() => {
