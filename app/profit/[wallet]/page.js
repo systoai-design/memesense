@@ -145,7 +145,17 @@ export default function ProfitPage() {
                 })
             });
 
-            const json = await res.json();
+
+            let json;
+            const text = await res.text();
+
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                // If parsing fails, it's likely a 500/504 HTML error page
+                throw new Error(`Server Error (${res.status} ${res.statusText}): ${text.slice(0, 50)}...`);
+            }
+
             if (json.user) setUser(json.user); // Store usage data
 
             if (json.data && json.data.scanType) {
@@ -156,7 +166,7 @@ export default function ProfitPage() {
                 if (json.isPremiumLocked) {
                     setIsPremium(false);
                 } else {
-                    setError(json.error || 'Analysis failed');
+                    setError(json.error || `Error ${res.status}: ${json.message || res.statusText}`);
                 }
             } else {
                 if (json.data === null) {
@@ -172,7 +182,8 @@ export default function ProfitPage() {
             }
 
         } catch (e) {
-            setError('Network error');
+            console.error('Analysis Error:', e);
+            setError(e.message || 'Network error');
         } finally {
             setLoading(false);
         }
