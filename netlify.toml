@@ -13,5 +13,6 @@
 
 [functions]
   # Extend function timeout to 26s (max for Netlify Pro)
+  timeout = 26
   node_bundler = "esbuild"
   external_node_modules = ["@libsql/client"]
