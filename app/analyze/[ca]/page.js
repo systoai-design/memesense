@@ -69,7 +69,7 @@ export default function AnalyzePage() {
 
         // Timeout protection
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased to 60s to handle retries
 
         try {
             let deviceId = localStorage.getItem('memesense_device_id');
@@ -147,7 +147,7 @@ export default function AnalyzePage() {
 
         const interval = setInterval(() => {
             fetchAnalysis(true);
-        }, 30000); // Optimized to 30 seconds to save API costs
+        }, 60000); // Optimized to 60 seconds to reduce load and matches new timeout
 
         return () => clearInterval(interval);
     }, [ca, loading, fetchAnalysis]);
