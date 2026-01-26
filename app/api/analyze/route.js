@@ -42,6 +42,8 @@ export async function POST(request) {
     // TIMEOUT WRAPPER (25s)
     const TIMEOUT_MS = 25000;
 
+    const startTime = Date.now(); // Start Global Timer
+
     try {
         const raceLogic = async () => {
             const body = await request.json();
@@ -161,22 +163,24 @@ export async function POST(request) {
 
             // Dev Wallet Check
             // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
-            // Dev Wallet Check
-            // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
             let devWalletData;
 
             // TIME CHECK: Only run "Alpha Engine" checks if we have time left (e.g. > 5s remaining)
             // Function triggers at T=0, Timeout is T=25.
-            const elapsed = Date.now() - (global.requestStartTime || Date.now()); // Fallback if start time not tracked
-            // We can approximate by checking against a new Date.now() vs start of this function
-            // Let's rely on a rough check.
+            const elapsed = Date.now() - startTime;
 
-            if (isPremium || !isCacheValid || !cachedEntry.devWalletData) {
+            // Only attempt strict Alpha check if we have > 5 seconds left
+            // Otherwise, we skip it to ensure we return PRIMARY data
+            if ((isPremium || !isCacheValid || !cachedEntry.devWalletData) && elapsed < 20000) {
                 devWalletData = await getDevWalletStatus(ca, holderData, ageHours).catch(err => ({
                     action: 'UNKNOWN', isEstimated: true, error: err.message
                 }));
             } else {
-                devWalletData = cachedEntry.devWalletData;
+                if (cachedEntry && cachedEntry.devWalletData) {
+                    devWalletData = cachedEntry.devWalletData;
+                } else {
+                    devWalletData = { action: 'UNKNOWN', isEstimated: true, reason: 'Time Budget Exceeded' };
+                }
             }
 
             // Metrics Calculation
@@ -259,11 +263,23 @@ export async function POST(request) {
 
                     // SAFEGUARD: Don't check whales if list is too huge or empty
                     if (walletsToCheck.size > 0 && walletsToCheck.size < 50) {
-                        whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
-                        if (whaleAnalysis.whales && holderData.top10Holders) {
-                            const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
-                            whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
-                            whaleAnalysis.count = whaleAnalysis.whales.length;
+
+                        // CHECK REMAINING TIME for this step
+                        const timeUsed = Date.now() - startTime;
+                        const remaining = TIMEOUT_MS - timeUsed - 2000; // Leave 2s buffer for JSON serialization
+
+                        if (remaining > 2000) {
+                            whaleAnalysis = await timeoutOp(
+                                getWhaleAnalysis(Array.from(walletsToCheck)),
+                                remaining,
+                                { count: 0, whales: [], isEstimated: true, reason: 'Timeout' }
+                            );
+
+                            if (whaleAnalysis.whales && holderData.top10Holders) {
+                                const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
+                                whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
+                                whaleAnalysis.count = whaleAnalysis.whales.length;
+                            }
                         }
                     }
                 }
