@@ -78,10 +78,13 @@ export default function AnalyzePage() {
                 localStorage.setItem('memesense_device_id', deviceId);
             }
 
+            // Ensure we use the latest wallet address from storage if state is stale
+            const currentWallet = walletAddress || localStorage.getItem('memesense_wallet');
+
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ca, deviceId, walletAddress, isRefresh }),
+                body: JSON.stringify({ ca, deviceId, walletAddress: currentWallet, isRefresh }),
                 signal: controller.signal
             });
 
