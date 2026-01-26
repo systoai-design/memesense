@@ -1,5 +1,3 @@
-export const maxDuration = 60; // Allow 60 seconds for profit analysis
-
 import { NextResponse } from 'next/server';
 import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
@@ -7,217 +5,196 @@ import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis
 import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 
 export async function POST(request) {
-    // TIMEOUT WRAPPER (25s to stay under Netlify 26s limit)
-    const TIMEOUT_MS = 25000;
-
     try {
-        // Encapsulate main logic in a function to race against timeout
-        const analysisTask = async () => {
-            const body = await request.json();
-            const { walletToAnalyze, deviceId, userWallet, scanType = 'quick' } = body;
+        const body = await request.json();
+        const { walletToAnalyze, deviceId, userWallet } = body;
 
-            console.log(`[ProfitAPI] Request: wallet=${walletToAnalyze}, type=${scanType}, deviceId=${deviceId}`);
+        console.log(`[ProfitAPI] Request: walletToAnalyze=${walletToAnalyze}, deviceId=${deviceId}, userWallet=${userWallet}`);
 
-            // 1. Auth & Premium Check
-            const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
-            console.log(`[ProfitAPI] User Resolved: ID=${user.id}, Tier=${user.tier}, Wallet=${user.wallet_address}`);
+        // 1. Auth & Premium Check
+        const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
+        console.log(`[ProfitAPI] User Resolved: ID=${user.id}, Tier=${user.tier}, Wallet=${user.wallet_address}`);
 
-            // Admin Bypass
-            const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
-            const isAdmin = userWallet === ADMIN_WALLET;
-            const isRefresh = body.isRefresh || false;
+        // Admin Bypass
+        const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
+        const isAdmin = userWallet === ADMIN_WALLET;
 
-            // Check Usage Limits (for Free users)
-            const usageCheck = await canUseAnalysis(user.id);
+        // Check Usage Limits (for Free users)
+        // We allow FREE, PREMIUM, TRIAL. But FREE is limited.
+        const usageCheck = await canUseAnalysis(user.id);
 
-            if (!isAdmin && deviceId !== 'demo-landing' && !usageCheck.allowed) {
-                return NextResponse.json({
-                    success: false,
-                    error: usageCheck.reason,
-                    isPremiumLocked: true,
-                    debugInfo: {
-                        userId: user.id,
-                        tier: user.tier,
-                    }
-                }, { status: 403 });
-            }
-
-            if (!walletToAnalyze) {
-                return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
-            }
-
-            // Limit Logic: Quick (100) vs Deep (1000)
-            let txLimit = 100; // Default Quick Scan
-            const isPremiumUser = user.tier === 'PREMIUM' || user.tier === 'TRIAL' || user.tier === 'Premium' || user.tier === 'Premium Trial';
-
-            if (scanType === 'deep') {
-                if (isPremiumUser || isAdmin) {
-                    txLimit = 1000;
-                    console.log('[ProfitAPI] Deep Scan authorized for Premium/Admin user.');
-                } else {
-                    console.log('[ProfitAPI] Deep Scan denied for Free user. Falling back to Quick Scan.');
-                }
-            }
-
-            // 2. Fetch Data (Parallelize History and Balance)
-            console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze} (Limit: ${txLimit})`);
-            let trades = [];
-            let balance = 0;
-
-            try {
-                const [historyRes, balanceRes] = await Promise.allSettled([
-                    getWalletHistory(walletToAnalyze, { limit: txLimit }),
-                    (async () => {
-                        const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
-                        if (!apiKey) return 0;
-                        const res = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
-                        const json = await res.json();
-                        return (json?.nativeBalance || 0) / 1e9;
-                    })()
-                ]);
-
-                if (historyRes.status === 'fulfilled') {
-                    trades = historyRes.value;
-                } else {
-                    throw historyRes.reason;
-                }
-
-                if (balanceRes.status === 'fulfilled') {
-                    balance = balanceRes.value;
-                }
-            } catch (fetchError) {
-                console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
-                return NextResponse.json({
-                    success: false,
-                    error: `Helius API Error: ${fetchError.message}`,
-                    data: null
-                }, { status: 500 });
-            }
-
-            if (trades.length === 0) {
-                return NextResponse.json({
-                    success: true,
-                    data: null,
-                    message: 'No trading history found for this wallet.'
-                });
-            }
-
-            // Manual scans always count as 1 credit
-            const skipUsageRecord = isAdmin || isRefresh || deviceId === 'demo-landing';
-            if (!skipUsageRecord) {
-                await recordUsage(user.id, walletToAnalyze);
-            }
-
-            // 3. Preliminary Analysis (Identifies Open Positions)
-            const initialAnalysis = analyzeTimeWindows(trades);
-
-            // 4. Fetch Prices and Metadata in Parallel
-            const allDetailsForMetadata = initialAnalysis.all.details;
-            const uniqueMintsForMetadata = [...new Set(allDetailsForMetadata.map(d => d.mint))];
-            const openMints = allDetailsForMetadata
-                .filter(p => p.status === 'OPEN' && p.remainingTokens > 0)
-                .map(p => p.mint);
-            const uniqueMintsToPrice = [...new Set(openMints)];
-
-            let priceMap = {};
-            let solPrice = 100; // Fallback
-            let tokenMetadata = {};
-
-            try {
-                const [pricesRes, solPriceRes, metadataRes] = await Promise.allSettled([
-                    uniqueMintsToPrice.length > 0 ? getBatchTokenPrices(uniqueMintsToPrice.slice(0, 90)) : Promise.resolve({}),
-                    getTokenData('So11111111111111111111111111111111111111112'),
-                    getBatchTokenMetadata(uniqueMintsForMetadata)
-                ]);
-
-                if (pricesRes.status === 'fulfilled') priceMap = pricesRes.value;
-                if (solPriceRes.status === 'fulfilled') solPrice = solPriceRes.value.price;
-                if (metadataRes.status === 'fulfilled') tokenMetadata = metadataRes.value;
-            } catch (e) {
-                console.error('Info: Parallel data fetch partial failure', e);
-            }
-
-            const analysis = analyzeTimeWindows(trades, priceMap);
-
-            const summary = analysis;
-            const globalMetrics = summary['all'];
-            let aiStatus = 'UNPROFITABLE';
-            let aiScore = 50;
-
-            if (globalMetrics.profitFactor >= 1.5 && globalMetrics.winRate > 40) {
-                aiStatus = 'PROFITABLE';
-                aiScore = 85 + Math.min(globalMetrics.profitFactor, 5);
-            } else if (globalMetrics.profitFactor >= 1.0) {
-                aiStatus = 'PROFITABLE';
-                aiScore = 65;
-            } else {
-                if (globalMetrics.totalTrades > 50) aiStatus = 'HIGH RISK';
-                aiScore = 30;
-            }
-
-            const aiVerdict = {
-                status: aiStatus,
-                score: Math.min(Math.round(aiScore), 100),
-                summary: null
-            };
-
-            Object.keys(summary).forEach(key => {
-                const metrics = summary[key];
-                metrics.totalRealizedPnLUSD = metrics.totalRealizedPnL * solPrice;
-                metrics.grossProfitUSD = metrics.grossProfit * solPrice;
-                metrics.grossLossUSD = metrics.grossLoss * solPrice;
-                metrics.avgPnLUSD = metrics.avgPnL * solPrice;
-                metrics.totalVolumeUSD = metrics.totalVolume * solPrice;
-
-                const totalUnrealizedPnL = metrics.details.reduce((acc, p) => acc + (p.unrealizedPnL || 0), 0);
-                metrics.totalUnrealizedPnL = totalUnrealizedPnL;
-                metrics.totalUnrealizedPnLUSD = totalUnrealizedPnL * solPrice;
-            });
-
-            if (!skipUsageRecord) {
-                await recordScan(user.id, {
-                    address: walletToAnalyze,
-                    name: 'Wallet',
-                    symbol: 'SOL',
-                    imageUrl: null
-                }, 'wallet');
-            }
-
-            return NextResponse.json({
-                success: true,
-                data: {
-                    summary,
-                    tokenInfo: tokenMetadata,
-                    balance,
-                    solPrice,
-                    aiVerdict,
-                    scanType: txLimit === 1000 ? 'deep' : 'quick'
-                },
-                user: {
-                    tier: user.tier,
-                    remainingToday: skipUsageRecord ? usageCheck.remainingToday : Math.max(0, usageCheck.remainingToday - 1),
-                    usedToday: skipUsageRecord ? usageCheck.usedToday : (usageCheck.usedToday + 1),
-                    dailyLimit: usageCheck.dailyLimit,
-                    credits: user.credits
-                }
-            });
-        };
-
-        return await Promise.race([
-            analysisTask(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('ANALYSIS_TIMEOUT')), TIMEOUT_MS))
-        ]);
-
-    } catch (e) {
-        if (e.message === 'ANALYSIS_TIMEOUT') {
-            console.error('[ProfitAPI] Timeout: Analysis took longer than 25s');
+        // Strict Block only if NOT allowed AND NOT Admin AND NOT Demo Landing
+        if (!isAdmin && deviceId !== 'demo-landing' && !usageCheck.allowed) {
             return NextResponse.json({
                 success: false,
-                error: 'Analysis Timeout: The scan took too long. Try "Quick Scan" or retry.',
-                details: 'Server execution limit reached (25s).'
-            }, { status: 408 });
+                error: usageCheck.reason,
+                isPremiumLocked: true,
+                debugInfo: {
+                    userId: user.id,
+                    tier: user.tier,
+                    receivedWallet: userWallet,
+                    subscriptionExpiry: user.subscription_expiry
+                }
+            }, { status: 403 });
         }
 
+        if (!walletToAnalyze) {
+            return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+        }
+
+        // 2. Fetch Data
+        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
+        let trades = [];
+        try {
+            trades = await getWalletHistory(walletToAnalyze);
+        } catch (fetchError) {
+            console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
+            return NextResponse.json({
+                success: false,
+                error: `Helius API Error: ${fetchError.message}`,
+                data: null
+            }, { status: 500 });
+        }
+
+        // Record usage if we seemingly got data (or just record attempt?)
+        // Usually record usage only if we return value.
+        // We'll record at the end.
+
+        // Fetch Balance (SOL)
+        let balance = 0;
+        try {
+            // Extract Helius key or from env
+            const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
+            if (apiKey) {
+                const balRes = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
+                const balJson = await balRes.json();
+                if (balJson && balJson.nativeBalance) {
+                    balance = balJson.nativeBalance / 1e9;
+                }
+            }
+        } catch (e) {
+            console.error('Info: Balance fetch failed', e.message);
+        }
+
+        if (trades.length === 0) {
+            return NextResponse.json({
+                success: true,
+                data: null,
+                message: 'No trading history found for this wallet.'
+            });
+        }
+
+        // Record usage now that we found valid history (deduct credit/limit)
+        if (!isAdmin && deviceId !== 'demo-landing') {
+            await recordUsage(user.id, walletToAnalyze);
+        }
+
+        // 3. Preliminary Analysis (Identifies Open Positions)
+        const initialAnalysis = analyzeTimeWindows(trades);
+
+        // 4. Fetch Prices for Open Positions
+        // Extract all mints that have "OPEN" status in 'all' timeframe
+        const openMints = initialAnalysis.all.details
+            .filter(p => p.status === 'OPEN' && p.remainingTokens > 0)
+            .map(p => p.mint);
+
+        // Also fetch prices for top closed positions just in case (optional, but let's stick to open)
+        // Combine unique mints
+        const uniqueMintsToFetch = [...new Set(openMints)];
+        let priceMap = {};
+
+        if (uniqueMintsToFetch.length > 0) {
+            priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90)); // Limit to 90 to be safe
+        }
+
+
+        // 5a. Fetch SOL Price (wSOL)
+        let solPrice = 0;
+        try {
+            const wSOL = 'So11111111111111111111111111111111111111112';
+            const wSolData = await getTokenData(wSOL);
+            solPrice = wSolData.price;
+        } catch (e) {
+            console.error('Info: Failed to fetch SOL price', e);
+        }
+
+        // 5b. Re-Analyze with Prices
+        const analysis = analyzeTimeWindows(trades, priceMap); // Make sure analyzeTimeWindows passes priceMap 
+
+        // 6. Metadata Optimization
+        // Get unique mints from ALL time trades
+        const allDetails = analysis.all.details;
+        const uniqueMints = [...new Set(allDetails.map(d => d.mint))];
+        const tokenMetadata = await getBatchTokenMetadata(uniqueMints);
+
+        // 7. Inject USD Values & AI Verdict
+        const summary = analysis; // It's an object with keys 1d, 7d, etc.
+
+        // GLOBAL AI VERDICT (Based on 'all' timeframe)
+        const globalMetrics = summary['all'];
+        let aiStatus = 'UNPROFITABLE';
+        let aiScore = 50;
+
+        if (globalMetrics.profitFactor >= 1.5 && globalMetrics.winRate > 40) {
+            aiStatus = 'PROFITABLE';
+            aiScore = 85 + Math.min(globalMetrics.profitFactor, 5); // Cap bonus
+        } else if (globalMetrics.profitFactor >= 1.0) {
+            aiStatus = 'PROFITABLE'; // Marginally
+            aiScore = 65;
+        } else {
+            // Unprofitable
+            // Check if "High Risk" (high volume/activity but losing)
+            if (globalMetrics.totalTrades > 50) aiStatus = 'HIGH RISK';
+            aiScore = 30;
+        }
+
+        // Generate AI Text Summary
+        // REMOVED at user request to improve speed and avoid rate limits
+        const aiSummary = null;
+
+        const aiVerdict = {
+            status: aiStatus,
+            score: Math.min(Math.round(aiScore), 100),
+            summary: aiSummary
+        };
+
+        // Add USD equivalents to each timeframe
+        Object.keys(summary).forEach(key => {
+            const metrics = summary[key];
+            metrics.totalRealizedPnLUSD = metrics.totalRealizedPnL * solPrice;
+            metrics.grossProfitUSD = metrics.grossProfit * solPrice;
+            metrics.grossLossUSD = metrics.grossLoss * solPrice;
+            metrics.avgPnLUSD = metrics.avgPnL * solPrice;
+            metrics.totalVolumeUSD = metrics.totalVolume * solPrice;
+
+            // Total Unrealized Sum
+            const totalUnrealizedPnL = metrics.details.reduce((acc, p) => acc + (p.unrealizedPnL || 0), 0);
+            metrics.totalUnrealizedPnL = totalUnrealizedPnL;
+            metrics.totalUnrealizedPnLUSD = totalUnrealizedPnL * solPrice;
+        });
+
+        // Record Scan History
+        if (!isAdmin && deviceId !== 'demo-landing') {
+            await recordScan(user.id, {
+                address: walletToAnalyze,
+                name: 'Wallet', // Default name, user can label it later
+                symbol: 'SOL',
+                imageUrl: null
+            }, 'wallet');
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                summary,
+                tokenInfo: tokenMetadata, // Map of mint -> { symbol, image, name }
+                balance,
+                solPrice,
+                aiVerdict
+            }
+        });
+
+    } catch (e) {
         console.error('Profit API Error:', e);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
