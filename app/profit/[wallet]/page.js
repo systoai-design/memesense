@@ -18,7 +18,11 @@ export default function ProfitPage() {
     // Wallet Connection State
     const [connectedWallet, setConnectedWallet] = useState(null);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
+    const [connectedWallet, setConnectedWallet] = useState(null);
+    const [isWalletConnected, setIsWalletConnected] = useState(false);
     const [isWalletChecking, setIsWalletChecking] = useState(true); // New state to pause analysis until check done
+    const [scanType, setScanType] = useState('quick'); // 'quick' or 'deep'
+    const [showPremiumModal, setShowPremiumModal] = useState(false); // To trigger upgrade modal
 
     const getProvider = () => {
         if ('phantom' in window) {
@@ -117,11 +121,11 @@ export default function ProfitPage() {
 
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
-            analyzeWallet(walletToAnalyze);
+            analyzeWallet(walletToAnalyze, 'quick'); // Default to quick
         }
     }, [walletToAnalyze, connectedWallet, isWalletChecking]); // Re-run if connected wallet changes (might unlock premium)
 
-    async function analyzeWallet(address) {
+    async function analyzeWallet(address, type = 'quick') {
         setLoading(true);
         setError(null);
 
@@ -136,12 +140,18 @@ export default function ProfitPage() {
                     walletToAnalyze: address,
                     deviceId,
                     userWallet,
-                    isRefresh: false
+                    userWallet,
+                    isRefresh: false,
+                    scanType: type // Send 'quick' or 'deep'
                 })
             });
 
             const json = await res.json();
             if (json.user) setUser(json.user); // Store usage data
+
+            if (json.data && json.data.scanType) {
+                setScanType(json.data.scanType); // Update state to reflect actual scan type used
+            }
 
             if (!res.ok) {
                 if (json.isPremiumLocked) {
@@ -310,7 +320,66 @@ export default function ProfitPage() {
                 </div>
             </div>
 
+            {/* UPSELL MODAL TRIGGER (Hidden logic) */}
+            {/* If we needed a custom modal we'd add it here, but we reuse the lock screen style or redirect */}
+
             <div className={styles.content}>
+
+                {/* --- SCAN TYPE INDICATOR & DEEP SCAN BUTTON --- */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                    <div style={{
+                        background: 'rgba(0,0,0,0.5)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '20px',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <div style={{
+                            padding: '6px 12px',
+                            borderRadius: '16px',
+                            background: scanType === 'quick' ? 'var(--primary)' : 'transparent',
+                            color: scanType === 'quick' ? 'black' : '#888',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            cursor: 'default'
+                        }}>
+                            <Activity size={12} /> Quick Scan (100 Txs)
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (user.tier === 'FREE') {
+                                    alert('Deep Scan is a Premium Feature. Upgrade to access full history analysis.');
+                                    router.push('/upgrade');
+                                } else {
+                                    analyzeWallet(walletToAnalyze, 'deep');
+                                }
+                            }}
+                            disabled={loading}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '16px',
+                                background: scanType === 'deep' ? 'var(--primary)' : 'transparent',
+                                color: scanType === 'deep' ? 'black' : (loading ? '#444' : '#ccc'),
+                                border: 'none',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Zap size={12} fill={scanType === 'deep' ? 'black' : 'none'} color={scanType === 'deep' ? 'black' : '#ccff00'} />
+                            {loading && scanType === 'quick' ? 'Deep Scan (Premium)' : scanType === 'deep' ? 'Deep Scan Active' : 'Start Deep Scan'}
+                        </button>
+                    </div>
+                </div>
 
                 <div className={styles.glassCard} style={{ marginBottom: 24, padding: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
