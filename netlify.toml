@@ -6,3 +6,8 @@
   NODE_VERSION = "20"
   # Disable secrets scanner temporarily to pass build (Manual audit confirmed clean)
   SECRETS_SCAN_ENABLED = "false"
+
+[functions]
+  # Extend function timeout to 26s (max for Netlify Pro)
+  node_bundler = "esbuild"
+  external_node_modules = ["@libsql/client"]
