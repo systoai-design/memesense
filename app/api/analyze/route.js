@@ -75,7 +75,7 @@ export async function POST(request) {
 
         // --- HYBRID CACHING STRATEGY ---
         // 1. Check Cache for "Heavy" Data (AI, Holders, Whales)
-        const CACHE_TTL = 60 * 1000; // 60 Seconds
+        const CACHE_TTL = 5 * 60 * 1000; // 60 Seconds
         const now = Date.now();
         const cachedEntry = global.analysisCache[ca];
         const isCacheValid = cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL);
