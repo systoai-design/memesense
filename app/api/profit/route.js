@@ -96,11 +96,19 @@ export async function POST(request) {
             });
         }
 
-        // Record usage now that we found valid history (deduct credit/limit)
-        if (!isAdmin && deviceId !== 'demo-landing') {
-            const action = depth === 'deep' ? 'deep_analysis' : 'analysis';
-            await recordUsage(user.id, walletToAnalyze, action);
-        }
+        // 3. Parallelize Data Fetching
+        // Start Metadata Fetch (Async)
+        const uniqueMints = [...new Set(trades.filter(t => t.mint).map(t => t.mint))];
+        const metadataPromise = getBatchTokenMetadata(uniqueMints);
+
+        // Start SOL Price Fetch (Async)
+        const solPricePromise = (async () => {
+            try {
+                const wSOL = 'So11111111111111111111111111111111111111112';
+                const data = await getTokenData(wSOL);
+                return data.price || 0;
+            } catch (e) { return 0; }
+        })();
 
         // 3. Preliminary Analysis (Identifies Open Positions)
         const initialAnalysis = analyzeTimeWindows(trades);
@@ -111,34 +119,27 @@ export async function POST(request) {
             .filter(p => p.status === 'OPEN' && p.remainingTokens > 0)
             .map(p => p.mint);
 
-        // Also fetch prices for top closed positions just in case (optional, but let's stick to open)
-        // Combine unique mints
-        const uniqueMintsToFetch = [...new Set(openMints)];
-        let priceMap = {};
+        // Start Price Fetch (Async)
+        const uniqueOpenMints = [...new Set(openMints)];
+        const priceMapPromise = (async () => {
+            if (uniqueOpenMints.length > 0) {
+                return await getBatchTokenPrices(uniqueOpenMints.slice(0, 90));
+            }
+            return {};
+        })();
 
-        if (uniqueMintsToFetch.length > 0) {
-            priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90)); // Limit to 90 to be safe
-        }
 
-
-        // 5a. Fetch SOL Price (wSOL)
-        let solPrice = 0;
-        try {
-            const wSOL = 'So11111111111111111111111111111111111111112';
-            const wSolData = await getTokenData(wSOL);
-            solPrice = wSolData.price;
-        } catch (e) {
-            console.error('Info: Failed to fetch SOL price', e);
-        }
+        // 5. Await Critical Data for Final Analysis
+        const [priceMap, solPrice] = await Promise.all([
+            priceMapPromise,
+            solPricePromise
+        ]);
 
         // 5b. Re-Analyze with Prices
         const analysis = analyzeTimeWindows(trades, priceMap); // Make sure analyzeTimeWindows passes priceMap 
 
-        // 6. Metadata Optimization
-        // Get unique mints from ALL time trades
-        const allDetails = analysis.all.details;
-        const uniqueMints = [...new Set(allDetails.map(d => d.mint))];
-        const tokenMetadata = await getBatchTokenMetadata(uniqueMints);
+        // 7. Await Metadata (Non-blocking for analysis, but needed for response)
+        const tokenMetadata = await metadataPromise;
 
         // 7. Inject USD Values & AI Verdict
         const summary = analysis; // It's an object with keys 1d, 7d, etc.
@@ -188,12 +189,17 @@ export async function POST(request) {
 
         // Record Scan History
         if (!isAdmin && deviceId !== 'demo-landing') {
-            await recordScan(user.id, {
-                address: walletToAnalyze,
-                name: 'Wallet', // Default name, user can label it later
-                symbol: 'SOL',
-                imageUrl: null
-            }, 'wallet');
+            const action = depth === 'deep' ? 'deep_analysis' : 'analysis';
+            // We await these to ensure consistency but run them in parallel
+            await Promise.all([
+                recordUsage(user.id, walletToAnalyze, action),
+                recordScan(user.id, {
+                    address: walletToAnalyze,
+                    name: 'Wallet', // Default name, user can label it later
+                    symbol: 'SOL',
+                    imageUrl: null
+                }, 'wallet')
+            ]);
         }
 
         return NextResponse.json({
