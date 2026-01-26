@@ -18,8 +18,7 @@ export default function ProfitPage() {
     // Wallet Connection State
     const [connectedWallet, setConnectedWallet] = useState(null);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
-    const [connectedWallet, setConnectedWallet] = useState(null);
-    const [isWalletConnected, setIsWalletConnected] = useState(false);
+
     const [isWalletChecking, setIsWalletChecking] = useState(true); // New state to pause analysis until check done
     const [scanType, setScanType] = useState('quick'); // 'quick' or 'deep'
     const [showPremiumModal, setShowPremiumModal] = useState(false); // To trigger upgrade modal
