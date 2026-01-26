@@ -73,7 +73,6 @@ async function migrate() {
         name TEXT,
         symbol TEXT,
         image_url TEXT,
-        type TEXT DEFAULT 'token',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )

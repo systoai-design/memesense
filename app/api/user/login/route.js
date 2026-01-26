@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis } from '@/lib/db';
+import { getOrCreateUser } from '@/lib/db';
 
 export async function POST(request) {
     try {
@@ -10,7 +10,6 @@ export async function POST(request) {
         }
 
         const user = await getOrCreateUser({ walletAddress });
-        const usage = await canUseAnalysis(user.id);
 
         return NextResponse.json({
             success: true,
@@ -19,9 +18,7 @@ export async function POST(request) {
                 walletAddress: user.wallet_address,
                 isOnboarded: user.is_onboarded === 1,
                 tier: user.tier,
-                credits: user.credits,
-                usedToday: usage.usedToday,
-                dailyLimit: usage.dailyLimit
+                credits: user.credits
             }
         });
 

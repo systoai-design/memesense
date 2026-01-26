@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -19,10 +18,7 @@ export default function ProfitPage() {
     // Wallet Connection State
     const [connectedWallet, setConnectedWallet] = useState(null);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
-
     const [isWalletChecking, setIsWalletChecking] = useState(true); // New state to pause analysis until check done
-    const [scanType, setScanType] = useState('quick'); // 'quick' or 'deep'
-    const [showPremiumModal, setShowPremiumModal] = useState(false); // To trigger upgrade modal
 
     const getProvider = () => {
         if ('phantom' in window) {
@@ -108,7 +104,6 @@ export default function ProfitPage() {
     // Decode wallet address if it's encoded or just use parameter
     const walletToAnalyze = decodeURIComponent(walletParam);
 
-    const [user, setUser] = useState({ tier: 'FREE', usedToday: 0, dailyLimit: 10 });
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -119,29 +114,13 @@ export default function ProfitPage() {
     const [sortField, setSortField] = useState('date'); // 'date', 'pnl', 'roi'
     const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
 
-    // AbortController Ref to cancel duplicated requests
-    const abortControllerRef = React.useRef(null);
-
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
-            analyzeWallet(walletToAnalyze, 'quick');
+            analyzeWallet(walletToAnalyze);
         }
-        // Cleanup function to cancel on unmount or re-run
-        return () => {
-            if (abortControllerRef.current) abortControllerRef.current.abort();
-        };
     }, [walletToAnalyze, connectedWallet, isWalletChecking]); // Re-run if connected wallet changes (might unlock premium)
 
-    async function analyzeWallet(address, type = 'quick') {
-        // Cancel previous request if exists
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        // Create new controller
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
+    async function analyzeWallet(address) {
         setLoading(true);
         setError(null);
 
@@ -150,40 +129,22 @@ export default function ProfitPage() {
             const userWallet = connectedWallet;
 
             const res = await fetch('/api/profit', {
-                signal: controller.signal,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     walletToAnalyze: address,
                     deviceId,
-                    userWallet: connectedWallet,
-                    isRefresh: false,
-                    scanType: type // Send 'quick' or 'deep'
+                    userWallet
                 })
             });
 
-
-            let json;
-            const text = await res.text();
-
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                // If parsing fails, it's likely a 500/504 HTML error page
-                throw new Error(`Server Error (${res.status} ${res.statusText}): ${text.slice(0, 50)}...`);
-            }
-
-            if (json.user) setUser(json.user); // Store usage data
-
-            if (json.data && json.data.scanType) {
-                setScanType(json.data.scanType); // Update state to reflect actual scan type used
-            }
+            const json = await res.json();
 
             if (!res.ok) {
                 if (json.isPremiumLocked) {
                     setIsPremium(false);
                 } else {
-                    setError(json.error || `Error ${res.status}: ${json.message || res.statusText}`);
+                    setError(json.error || 'Analysis failed');
                 }
             } else {
                 if (json.data === null) {
@@ -199,18 +160,9 @@ export default function ProfitPage() {
             }
 
         } catch (e) {
-            if (e.name === 'AbortError') {
-                console.log('Request aborted');
-                return;
-            }
-            console.error('Analysis Error:', e);
-            setError(e.message || 'Network error');
+            setError('Network error');
         } finally {
-            // Only stop loading if we are still the active request
-            if (abortControllerRef.current === controller) {
-                setLoading(false);
-                abortControllerRef.current = null;
-            }
+            setLoading(false);
         }
     }
 
@@ -355,66 +307,7 @@ export default function ProfitPage() {
                 </div>
             </div>
 
-            {/* UPSELL MODAL TRIGGER (Hidden logic) */}
-            {/* If we needed a custom modal we'd add it here, but we reuse the lock screen style or redirect */}
-
             <div className={styles.content}>
-
-                {/* --- SCAN TYPE INDICATOR & DEEP SCAN BUTTON --- */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                    <div style={{
-                        background: 'rgba(0,0,0,0.5)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '20px',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <div style={{
-                            padding: '6px 12px',
-                            borderRadius: '16px',
-                            background: scanType === 'quick' ? 'var(--primary)' : 'transparent',
-                            color: scanType === 'quick' ? 'black' : '#888',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            cursor: 'default'
-                        }}>
-                            <Activity size={12} /> Quick Scan (100 Txs)
-                        </div>
-                        <button
-                            onClick={() => {
-                                if (user.tier === 'FREE') {
-                                    alert('Deep Scan is a Premium Feature. Upgrade to access full history analysis.');
-                                    router.push('/upgrade');
-                                } else {
-                                    analyzeWallet(walletToAnalyze, 'deep');
-                                }
-                            }}
-                            disabled={loading}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '16px',
-                                background: scanType === 'deep' ? 'var(--primary)' : 'transparent',
-                                color: scanType === 'deep' ? 'black' : (loading ? '#444' : '#ccc'),
-                                border: 'none',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <Zap size={12} fill={scanType === 'deep' ? 'black' : 'none'} color={scanType === 'deep' ? 'black' : '#ccff00'} />
-                            {loading && scanType === 'quick' ? 'Deep Scan (Premium)' : scanType === 'deep' ? 'Deep Scan Active' : 'Start Deep Scan'}
-                        </button>
-                    </div>
-                </div>
 
                 <div className={styles.glassCard} style={{ marginBottom: 24, padding: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
@@ -424,26 +317,6 @@ export default function ProfitPage() {
                                 <Wallet size={32} color="#ccff00" />
                             </div>
                             <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                    <span className={`badge ${user.tier === 'PREMIUM' || user.tier === 'TRIAL' ? 'badge-premium' : 'badge-info'}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
-                                        {user.tier === 'TRIAL' ? 'PREMIUM TRIAL' : user.tier}
-                                    </span>
-                                    {user.tier === 'FREE' && (
-                                        <span style={{
-                                            background: 'rgba(204, 255, 0, 0.1)',
-                                            color: '#ccff00',
-                                            fontSize: '10px',
-                                            padding: '2px 8px',
-                                            borderRadius: '4px',
-                                            fontWeight: 'bold',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px'
-                                        }}>
-                                            ⚡ {user.usedToday || 0}/{user.dailyLimit || 10} FREE SCAN(S)
-                                        </span>
-                                    )}
-                                </div>
                                 <div className={styles.label} style={{ marginBottom: 4 }}>Wallet Address</div>
                                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                                     <div className={styles.value} style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}>

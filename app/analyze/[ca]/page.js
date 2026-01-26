@@ -69,7 +69,7 @@ export default function AnalyzePage() {
 
         // Timeout protection
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased to 60s to handle retries
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
         try {
             let deviceId = localStorage.getItem('memesense_device_id');
@@ -78,13 +78,10 @@ export default function AnalyzePage() {
                 localStorage.setItem('memesense_device_id', deviceId);
             }
 
-            // Ensure we use the latest wallet address from storage if state is stale
-            const currentWallet = walletAddress || localStorage.getItem('memesense_wallet');
-
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ca, deviceId, walletAddress: currentWallet, isRefresh }),
+                body: JSON.stringify({ ca, deviceId, walletAddress }),
                 signal: controller.signal
             });
 
@@ -115,7 +112,6 @@ export default function AnalyzePage() {
                         // Update Analysis & Entry Point (Unlocked)
                         analysis: result.analysis,
                         entryPoint: result.entryPoint,
-                        user: result.user, // Ensure scan limits/usage stay live
                         timestamp: new Date().toISOString()
                     };
                 });
@@ -150,7 +146,7 @@ export default function AnalyzePage() {
 
         const interval = setInterval(() => {
             fetchAnalysis(true);
-        }, 60000); // Optimized to 60 seconds to reduce load and matches new timeout
+        }, 30000); // Optimized to 30 seconds to save API costs
 
         return () => clearInterval(interval);
     }, [ca, loading, fetchAnalysis]);
@@ -326,7 +322,7 @@ export default function AnalyzePage() {
                         </span>
                         {user.tier === 'FREE' && (
                             <span className={styles.trialRemaining}>
-                                ⚡ {user.usedToday || 0}/{user.dailyLimit || 10} FREE SCAN(S)
+                                ⚡ {user.remainingToday}/10 FREE SCAN(S)
                             </span>
                         )}
                         {user.tier === 'TRIAL' && (
