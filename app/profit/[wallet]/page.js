@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -118,13 +119,29 @@ export default function ProfitPage() {
     const [sortField, setSortField] = useState('date'); // 'date', 'pnl', 'roi'
     const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
 
+    // AbortController Ref to cancel duplicated requests
+    const abortControllerRef = React.useRef(null);
+
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
-            analyzeWallet(walletToAnalyze, 'quick'); // Default to quick
+            analyzeWallet(walletToAnalyze, 'quick');
         }
+        // Cleanup function to cancel on unmount or re-run
+        return () => {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+        };
     }, [walletToAnalyze, connectedWallet, isWalletChecking]); // Re-run if connected wallet changes (might unlock premium)
 
     async function analyzeWallet(address, type = 'quick') {
+        // Cancel previous request if exists
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // Create new controller
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         setLoading(true);
         setError(null);
 
@@ -133,6 +150,7 @@ export default function ProfitPage() {
             const userWallet = connectedWallet;
 
             const res = await fetch('/api/profit', {
+                signal: controller.signal,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -182,10 +200,18 @@ export default function ProfitPage() {
             }
 
         } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('Request aborted');
+                return;
+            }
             console.error('Analysis Error:', e);
             setError(e.message || 'Network error');
         } finally {
-            setLoading(false);
+            // Only stop loading if we are still the active request
+            if (abortControllerRef.current === controller) {
+                setLoading(false);
+                abortControllerRef.current = null;
+            }
         }
     }
 
