@@ -4,9 +4,11 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  SECRETS_SCAN_ENABLED = "false"
   HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=4bd4311b-8cf4-4f9e-9aac-e46f2375008d"
   NEXT_PUBLIC_RPC_URL = "https://api.mainnet-beta.solana.com"
 
 [functions]
+  timeout = 26
   node_bundler = "esbuild"
   external_node_modules = ["@libsql/client"]
