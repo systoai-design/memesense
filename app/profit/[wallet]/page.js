@@ -156,8 +156,7 @@ export default function ProfitPage() {
                 body: JSON.stringify({
                     walletToAnalyze: address,
                     deviceId,
-                    userWallet,
-                    userWallet,
+                    userWallet: connectedWallet,
                     isRefresh: false,
                     scanType: type // Send 'quick' or 'deep'
                 })
