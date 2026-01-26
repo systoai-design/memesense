@@ -62,7 +62,8 @@ export async function POST(request) {
                 return NextResponse.json({
                     success: false,
                     error: usageCheck.reason,
-                    isLimitReached: true
+                    isLimitReached: true,
+                    debug: usageCheck.debug // Expose DB state for troubleshooting
                 }, { status: 403 });
             }
 
