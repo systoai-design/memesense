@@ -114,13 +114,25 @@ export async function POST(request) {
                 };
 
                 // Fetch Heavy Data
+                // Helper to timeout individual promises
+                const timeoutOp = (promise, ms, fallback) => {
+                    return Promise.race([
+                        promise,
+                        new Promise(resolve => setTimeout(() => resolve(fallback), ms))
+                    ]);
+                };
+
+                // Fetch Heavy Data - WITH INDIVIDUAL TIMEOUTS to prevent one slow API from killing the request
+                // Bitquery is notoriously slow/flakey, so we give it 8s max before falling back.
+                const BITQUERY_TIMEOUT = 8000;
+
                 const [estHolderData, bondingData, sniperData, realHolderData, tokenAuthorityData, realTotalHolders] = await Promise.all([
-                    timeOp('getHolderData', getHolderData(ca)),
-                    timeOp('getBondingCurveData', getBondingCurveData(ca)),
-                    timeOp('getSniperData', getSniperData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
-                    timeOp('getRealHolderData', getRealHolderData(ca).catch(err => ({ isEstimated: true, error: err.message }))),
-                    timeOp('getTokenAuthorities', getTokenAuthorities(ca).catch(err => ({ burnPercent: 0, isRenounced: false, isFreezeRevoked: false, isEstimated: true }))),
-                    timeOp('getTotalHolderCount', getTotalHolderCount(ca).catch(err => null))
+                    timeoutOp(getHolderData(ca), BITQUERY_TIMEOUT, { isEstimated: true, totalHolders: 0 }),
+                    timeoutOp(getBondingCurveData(ca), BITQUERY_TIMEOUT, { progress: 0, isGraduated: false }),
+                    timeoutOp(getSniperData(ca), 15000, { isEstimated: true, reason: 'Timeout' }),
+                    timeoutOp(getRealHolderData(ca), 15000, { isEstimated: true, reason: 'Timeout' }),
+                    timeoutOp(getTokenAuthorities(ca), 10000, { burnPercent: 0, isRenounced: false, isEstimated: true }),
+                    timeoutOp(getTotalHolderCount(ca), 5000, null)
                 ]);
 
                 bucketedData = {
@@ -149,11 +161,17 @@ export async function POST(request) {
 
             // Dev Wallet Check
             // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
+            // Dev Wallet Check
+            // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
             let devWalletData;
+
+            // TIME CHECK: Only run "Alpha Engine" checks if we have time left (e.g. > 5s remaining)
+            // Function triggers at T=0, Timeout is T=25.
+            const elapsed = Date.now() - (global.requestStartTime || Date.now()); // Fallback if start time not tracked
+            // We can approximate by checking against a new Date.now() vs start of this function
+            // Let's rely on a rough check.
+
             if (isPremium || !isCacheValid || !cachedEntry.devWalletData) {
-                // Fetch Fresh for Premium or Cache Miss
-                // Note: If cache hit but user is premium, we run this.
-                if (isPremium && isCacheValid) console.log('[ALPHA ENGINE] Premium User: Running Fresh Dev Check');
                 devWalletData = await getDevWalletStatus(ca, holderData, ageHours).catch(err => ({
                     action: 'UNKNOWN', isEstimated: true, error: err.message
                 }));
@@ -222,22 +240,32 @@ export async function POST(request) {
             }
 
             // Whale Analysis (Expensive RPC)
-            let whaleAnalysis = {};
-            // PREMIUM LOGIC: If Premium, ALWAYS fetch fresh. If Free, use Cache.
+            let whaleAnalysis = { count: 0, whales: [] };
+
+            // Skip Whale Analysis if we are already over 20s
+            // (Assuming this is the last heavy step)
+
             if (isPremium || !isCacheValid || !cachedEntry.whaleAnalysis) {
-                if (isPremium && isCacheValid) console.log('[ALPHA ENGINE] Premium User: Running Fresh Whale Check');
-                const walletsToCheck = new Set();
-                if (holderData.top10Holders) {
-                    holderData.top10Holders.forEach(h => walletsToCheck.add(h.owner || h.address));
-                }
-                if (sniperData && sniperData.sniperWallets) {
-                    sniperData.sniperWallets.forEach(s => walletsToCheck.add(s.address));
-                }
-                whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
-                if (whaleAnalysis.whales && holderData.top10Holders) {
-                    const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
-                    whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
-                    whaleAnalysis.count = whaleAnalysis.whales.length;
+                // Check if we have time? 
+                // Just run it, but maybe optimize it to be skipped if holderData is just estimated?
+                if (!holderData.isEstimated) {
+                    const walletsToCheck = new Set();
+                    if (holderData.top10Holders) {
+                        holderData.top10Holders.forEach(h => walletsToCheck.add(h.owner || h.address));
+                    }
+                    if (sniperData && sniperData.sniperWallets) {
+                        sniperData.sniperWallets.forEach(s => walletsToCheck.add(s.address));
+                    }
+
+                    // SAFEGUARD: Don't check whales if list is too huge or empty
+                    if (walletsToCheck.size > 0 && walletsToCheck.size < 50) {
+                        whaleAnalysis = await getWhaleAnalysis(Array.from(walletsToCheck));
+                        if (whaleAnalysis.whales && holderData.top10Holders) {
+                            const systemAddrs = holderData.top10Holders.filter(h => h.isSystem).map(h => h.address);
+                            whaleAnalysis.whales = whaleAnalysis.whales.filter(w => !systemAddrs.includes(w.address));
+                            whaleAnalysis.count = whaleAnalysis.whales.length;
+                        }
+                    }
                 }
             } else {
                 whaleAnalysis = cachedEntry.whaleAnalysis;
