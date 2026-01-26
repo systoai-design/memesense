@@ -151,6 +151,12 @@ export default function ProfitPage() {
                     setError(json.error || 'Analysis failed');
                 }
             } else {
+                if (json.isToken) {
+                    setError('Detected Token Address. Redirecting...');
+                    router.push(json.redirect);
+                    return;
+                }
+
                 if (json.data === null) {
                     setError(json.message || 'No trading history found (or API limit reached). Try again later.');
                 } else {

@@ -74,6 +74,21 @@ export async function POST(request) {
         }
 
         if (trades.length === 0) {
+            // CHECK IF IT'S A TOKEN (User scanned a mint address)
+            try {
+                const tokenData = await getTokenData(walletToAnalyze);
+                if (tokenData && tokenData.price) {
+                    return NextResponse.json({
+                        success: false,
+                        isToken: true,
+                        redirect: `/analyze/${walletToAnalyze}`,
+                        message: 'This is a token address. Redirecting to analysis...'
+                    });
+                }
+            } catch (ignore) {
+                // Not a token either
+            }
+
             return NextResponse.json({
                 success: true,
                 data: null,
