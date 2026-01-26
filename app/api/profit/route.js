@@ -39,11 +39,32 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        // 2. Fetch Data
+        // 2. Fetch Data (Parallelize History and Balance)
         console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
         let trades = [];
+        let balance = 0;
+
         try {
-            trades = await getWalletHistory(walletToAnalyze);
+            const [historyRes, balanceRes] = await Promise.allSettled([
+                getWalletHistory(walletToAnalyze),
+                (async () => {
+                    const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
+                    if (!apiKey) return 0;
+                    const res = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
+                    const json = await res.json();
+                    return (json?.nativeBalance || 0) / 1e9;
+                })()
+            ]);
+
+            if (historyRes.status === 'fulfilled') {
+                trades = historyRes.value;
+            } else {
+                throw historyRes.reason;
+            }
+
+            if (balanceRes.status === 'fulfilled') {
+                balance = balanceRes.value;
+            }
         } catch (fetchError) {
             console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
             return NextResponse.json({
@@ -51,21 +72,6 @@ export async function POST(request) {
                 error: `Helius API Error: ${fetchError.message}`,
                 data: null
             }, { status: 500 });
-        }
-
-        // Fetch Balance (SOL)
-        let balance = 0;
-        try {
-            const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
-            if (apiKey) {
-                const balRes = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
-                const balJson = await balRes.json();
-                if (balJson && balJson.nativeBalance) {
-                    balance = balJson.nativeBalance / 1e9;
-                }
-            }
-        } catch (e) {
-            console.error('Info: Balance fetch failed', e.message);
         }
 
         if (trades.length === 0) {
@@ -85,32 +91,33 @@ export async function POST(request) {
         // 3. Preliminary Analysis (Identifies Open Positions)
         const initialAnalysis = analyzeTimeWindows(trades);
 
-        // 4. Fetch Prices for Open Positions
-        const openMints = initialAnalysis.all.details
+        // 4. Fetch Prices and Metadata in Parallel
+        const allDetailsForMetadata = initialAnalysis.all.details;
+        const uniqueMintsForMetadata = [...new Set(allDetailsForMetadata.map(d => d.mint))];
+        const openMints = allDetailsForMetadata
             .filter(p => p.status === 'OPEN' && p.remainingTokens > 0)
             .map(p => p.mint);
+        const uniqueMintsToPrice = [...new Set(openMints)];
 
-        const uniqueMintsToFetch = [...new Set(openMints)];
         let priceMap = {};
+        let solPrice = 100; // Fallback
+        let tokenMetadata = {};
 
-        if (uniqueMintsToFetch.length > 0) {
-            priceMap = await getBatchTokenPrices(uniqueMintsToFetch.slice(0, 90));
-        }
-
-        let solPrice = 0;
         try {
-            const wSOL = 'So11111111111111111111111111111111111111112';
-            const wSolData = await getTokenData(wSOL);
-            solPrice = wSolData.price;
+            const [pricesRes, solPriceRes, metadataRes] = await Promise.allSettled([
+                uniqueMintsToPrice.length > 0 ? getBatchTokenPrices(uniqueMintsToPrice.slice(0, 90)) : Promise.resolve({}),
+                getTokenData('So11111111111111111111111111111111111111112'),
+                getBatchTokenMetadata(uniqueMintsForMetadata)
+            ]);
+
+            if (pricesRes.status === 'fulfilled') priceMap = pricesRes.value;
+            if (solPriceRes.status === 'fulfilled') solPrice = solPriceRes.value.price;
+            if (metadataRes.status === 'fulfilled') tokenMetadata = metadataRes.value;
         } catch (e) {
-            console.error('Info: Failed to fetch SOL price', e);
+            console.error('Info: Parallel data fetch partial failure', e);
         }
 
         const analysis = analyzeTimeWindows(trades, priceMap);
-
-        const allDetails = analysis.all.details;
-        const uniqueMints = [...new Set(allDetails.map(d => d.mint))];
-        const tokenMetadata = await getBatchTokenMetadata(uniqueMints);
 
         const summary = analysis;
         const globalMetrics = summary['all'];
