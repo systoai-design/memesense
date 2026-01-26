@@ -109,20 +109,23 @@ export default function ProfitPage() {
     const [error, setError] = useState(null);
     const [isPremium, setIsPremium] = useState(true);
     const [debugInfo, setDebugInfo] = useState(null);
-    const [timeWindow, setTimeWindow] = useState('7d'); // Default to 7d
+    const [timeWindow, setTimeWindow] = useState('7d');
     const [historyFilter, setHistoryFilter] = useState('ALL');
-    const [sortField, setSortField] = useState('date'); // 'date', 'pnl', 'roi'
-    const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
+    const [sortField, setSortField] = useState('date');
+    const [sortDirection, setSortDirection] = useState('desc');
+    const [scanDepth, setScanDepth] = useState('normal'); // 'normal' | 'deep'
+    const [usageInfo, setUsageInfo] = useState(null);
 
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
-            analyzeWallet(walletToAnalyze);
+            analyzeWallet(walletToAnalyze, 'normal');
         }
-    }, [walletToAnalyze, connectedWallet, isWalletChecking]); // Re-run if connected wallet changes (might unlock premium)
+    }, [walletToAnalyze, connectedWallet, isWalletChecking]);
 
-    async function analyzeWallet(address) {
+    async function analyzeWallet(address, depth = 'normal') {
         setLoading(true);
         setError(null);
+        setScanDepth(depth);
 
         try {
             const deviceId = localStorage.getItem('memesense_device_id') || 'unknown';
@@ -134,7 +137,8 @@ export default function ProfitPage() {
                 body: JSON.stringify({
                     walletToAnalyze: address,
                     deviceId,
-                    userWallet
+                    userWallet,
+                    depth
                 })
             });
 
@@ -151,6 +155,9 @@ export default function ProfitPage() {
                     setError(json.message || 'No trading history found (or API limit reached). Try again later.');
                 } else {
                     setData(json.data);
+                    if (json.data.usage) {
+                        setUsageInfo(json.data.usage);
+                    }
                 }
             }
 
@@ -173,12 +180,12 @@ export default function ProfitPage() {
                 <div className={styles.loadingState}>
                     <div className={styles.loadingContent}>
                         <div className={styles.spinner}></div>
-                        <h2>Analyzing Wallet History...</h2>
+                        <h2>{scanDepth === 'deep' ? 'Running Deep Analysis...' : 'Analyzing Wallet History...'}</h2>
                         <p>Fetching on-chain data and checking profitability</p>
                         <div className={styles.loadingSteps}>
                             <div className={styles.step}>
                                 <span className={styles.stepIcon}><Wallet size={16} /></span>
-                                <span>Fetching 10,000 transactions...</span>
+                                <span>Fetching {scanDepth === 'deep' ? '1,000' : 'recent'} transactions...</span>
                             </div>
                             <div className={styles.step}>
                                 <span className={styles.stepIcon}><Search size={16} /></span>
@@ -404,6 +411,57 @@ export default function ProfitPage() {
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Quota & Deep Scan Banner */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, marginBottom: 24 }}>
+                    {/* Quota Badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            padding: '8px 12px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            fontSize: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                        }}>
+                            <Activity size={14} color="#888" />
+                            <span style={{ color: '#aaa' }}>Daily Scans:</span>
+                            <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
+                                {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
+                            </strong>
+                        </div>
+                    </div>
+
+                    {/* Deep Scan CTA */}
+                    {scanDepth === 'normal' && (
+                        <button
+                            onClick={() => {
+                                if (isPremium) {
+                                    analyzeWallet(walletToAnalyze, 'deep');
+                                } else {
+                                    router.push('/upgrade');
+                                }
+                            }}
+                            className="btn"
+                            style={{
+                                background: isPremium ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${isPremium ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`,
+                                color: isPremium ? '#c4b5fd' : '#aaa',
+                                padding: '8px 16px',
+                                fontSize: 13,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {isPremium ? <Zap size={14} /> : <Lock size={14} />}
+                            {isPremium ? 'Run Deep Scan (1000 txs)' : 'Unlock Deep Scan (Premium)'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Time Window Tabs */}

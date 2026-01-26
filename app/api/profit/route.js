@@ -7,34 +7,27 @@ import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { walletToAnalyze, deviceId, userWallet } = body;
+        const { walletToAnalyze, deviceId, userWallet, depth = 'normal' } = body;
 
-        console.log(`[ProfitAPI] Request: walletToAnalyze=${walletToAnalyze}, deviceId=${deviceId}, userWallet=${userWallet}`);
+        console.log(`[ProfitAPI] Request: wallet=${walletToAnalyze}, depth=${depth}, user=${userWallet}`);
 
         // 1. Auth & Premium Check
         const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
-        console.log(`[ProfitAPI] User Resolved: ID=${user.id}, Tier=${user.tier}, Wallet=${user.wallet_address}`);
 
         // Admin Bypass
         const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
         const isAdmin = userWallet === ADMIN_WALLET;
 
-        // Check Usage Limits (for Free users)
-        // We allow FREE, PREMIUM, TRIAL. But FREE is limited.
-        const usageCheck = await canUseAnalysis(user.id);
+        // Check Usage Limits
+        const usageCheck = await canUseAnalysis(user.id, depth);
 
-        // Strict Block only if NOT allowed AND NOT Admin AND NOT Demo Landing
+        // Strict Block
         if (!isAdmin && deviceId !== 'demo-landing' && !usageCheck.allowed) {
             return NextResponse.json({
                 success: false,
                 error: usageCheck.reason,
                 isPremiumLocked: true,
-                debugInfo: {
-                    userId: user.id,
-                    tier: user.tier,
-                    receivedWallet: userWallet,
-                    subscriptionExpiry: user.subscription_expiry
-                }
+                debugInfo: { userId: user.id, tier: user.tier }
             }, { status: 403 });
         }
 
@@ -43,12 +36,16 @@ export async function POST(request) {
         }
 
         // 2. Fetch Data
-        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
+        // Limit based on depth
+        const txLimit = (depth === 'deep' && (user.tier === 'PREMIUM' || user.tier === 'TRIAL' || isAdmin)) ? 1000 : 100;
+
+        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze} (Limit: ${txLimit})`);
         let trades = [];
         try {
-            trades = await getWalletHistory(walletToAnalyze);
+            trades = await getWalletHistory(walletToAnalyze, txLimit);
         } catch (fetchError) {
             console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
+            // ... existing error handling ...
             return NextResponse.json({
                 success: false,
                 error: `Helius API Error: ${fetchError.message}`,
@@ -86,7 +83,8 @@ export async function POST(request) {
 
         // Record usage now that we found valid history (deduct credit/limit)
         if (!isAdmin && deviceId !== 'demo-landing') {
-            await recordUsage(user.id, walletToAnalyze);
+            const action = depth === 'deep' ? 'deep_analysis' : 'analysis';
+            await recordUsage(user.id, walletToAnalyze, action);
         }
 
         // 3. Preliminary Analysis (Identifies Open Positions)
@@ -187,10 +185,14 @@ export async function POST(request) {
             success: true,
             data: {
                 summary,
-                tokenInfo: tokenMetadata, // Map of mint -> { symbol, image, name }
+                tokenInfo: tokenMetadata,
                 balance,
                 solPrice,
-                aiVerdict
+                aiVerdict,
+                usage: {
+                    remaining: usageCheck.remainingToday,
+                    type: depth
+                }
             }
         });
 
