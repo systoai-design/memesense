@@ -9,9 +9,9 @@ import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { walletToAnalyze, deviceId, userWallet } = body;
+        const { walletToAnalyze, deviceId, userWallet, scanType = 'quick' } = body;
 
-        console.log(`[ProfitAPI] Request: walletToAnalyze=${walletToAnalyze}, deviceId=${deviceId}, userWallet=${userWallet}`);
+        console.log(`[ProfitAPI] Request: wallet=${walletToAnalyze}, type=${scanType}, deviceId=${deviceId}`);
 
         // 1. Auth & Premium Check
         const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
@@ -41,14 +41,29 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
+        // Limit Logic: Quick (100) vs Deep (1000)
+        let txLimit = 100; // Default Quick Scan
+        const isPremiumUser = user.tier === 'PREMIUM' || user.tier === 'TRIAL' || user.tier === 'Premium' || user.tier === 'Premium Trial';
+
+        if (scanType === 'deep') {
+            if (isPremiumUser || isAdmin) {
+                txLimit = 1000;
+                console.log('[ProfitAPI] Deep Scan authorized for Premium/Admin user.');
+            } else {
+                console.log('[ProfitAPI] Deep Scan denied for Free user. Falling back to Quick Scan.');
+                // We could throw error, but better to just do quick scan and maybe add a warning flag?
+                // For now, let's just silently fallback or we can return a flag.
+            }
+        }
+
         // 2. Fetch Data (Parallelize History and Balance)
-        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
+        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze} (Limit: ${txLimit})`);
         let trades = [];
         let balance = 0;
 
         try {
             const [historyRes, balanceRes] = await Promise.allSettled([
-                getWalletHistory(walletToAnalyze),
+                getWalletHistory(walletToAnalyze, { limit: txLimit }),
                 (async () => {
                     const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
                     if (!apiKey) return 0;
@@ -172,7 +187,8 @@ export async function POST(request) {
                 tokenInfo: tokenMetadata,
                 balance,
                 solPrice,
-                aiVerdict
+                aiVerdict,
+                scanType: txLimit === 1000 ? 'deep' : 'quick'
             },
             user: {
                 tier: user.tier,
