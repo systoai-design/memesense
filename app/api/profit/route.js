@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getWalletCache, setWalletCache } from '@/lib/db';
+import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
 import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
@@ -7,9 +7,9 @@ import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { walletToAnalyze, deviceId, userWallet, depth = 'normal' } = body;
+        const { walletToAnalyze, deviceId, userWallet } = body;
 
-        console.log(`[ProfitAPI] Request: wallet=${walletToAnalyze}, depth=${depth}, user=${userWallet}`);
+        console.log(`[ProfitAPI] Request: wallet=${walletToAnalyze}, user=${userWallet}`);
 
         // 1. Auth & Premium Check
         const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
@@ -18,8 +18,8 @@ export async function POST(request) {
         const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
         const isAdmin = userWallet === ADMIN_WALLET;
 
-        // Check Usage Limits
-        const usageCheck = await canUseAnalysis(user.id, depth);
+        // Check Usage Limits (always deep scan now)
+        const usageCheck = await canUseAnalysis(user.id, 'deep');
 
         // Strict Block
         if (!isAdmin && deviceId !== 'demo-landing' && !usageCheck.allowed) {
@@ -35,56 +35,67 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        // 2. Fetch Data
-        // Limit based on depth
-        const txLimit = (depth === 'deep' && (user.tier === 'PREMIUM' || user.tier === 'TRIAL' || isAdmin)) ? 1000 : 100;
-
-        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze} (Limit: ${txLimit})`);
+        // 2. PERMANENT STORAGE: Check DB first, then fetch only new trades
+        console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
         let trades = [];
-        let fromCache = false;
+        let fetchedNewTrades = false;
 
-        // CHECK CACHE FIRST
         try {
-            const cachedTrades = await getWalletCache(walletToAnalyze);
-            if (cachedTrades && cachedTrades.length > 0) {
-                console.log(`[ProfitAPI] Cache HIT for ${walletToAnalyze} (${cachedTrades.length} trades)`);
-                trades = cachedTrades;
-                fromCache = true;
-            }
-        } catch (cacheError) {
-            console.warn('[ProfitAPI] Cache check failed:', cacheError.message);
-        }
+            // Get stored trades from Turso
+            const storedTrades = await getStoredTrades(walletToAnalyze);
+            const latestTimestamp = await getLatestTradeTimestamp(walletToAnalyze);
 
-        // FETCH FROM HELIUS IF NOT CACHED
-        if (!fromCache) {
-            try {
-                trades = await getWalletHistory(walletToAnalyze, txLimit);
+            if (storedTrades.length > 0) {
+                console.log(`[ProfitAPI] DB HIT: ${storedTrades.length} trades stored. Latest: ${new Date(latestTimestamp).toISOString()}`);
+                trades = storedTrades;
 
-                // Cache successful fetch
-                if (trades && trades.length > 0) {
-                    setWalletCache(walletToAnalyze, trades).catch(e =>
-                        console.warn('[ProfitAPI] Failed to cache trades:', e.message)
+                // Fetch only NEW trades since last stored
+                try {
+                    const newTrades = await getWalletHistory(walletToAnalyze, 1000, latestTimestamp);
+                    if (newTrades && newTrades.length > 0) {
+                        console.log(`[ProfitAPI] Found ${newTrades.length} new trades`);
+                        // Store new trades
+                        await storeWalletTrades(walletToAnalyze, newTrades);
+                        // Combine: new trades first (most recent), then stored
+                        trades = [...newTrades, ...storedTrades];
+                        fetchedNewTrades = true;
+                    }
+                } catch (incrementalError) {
+                    console.warn('[ProfitAPI] Incremental fetch failed, using stored data:', incrementalError.message);
+                    // Continue with stored trades only
+                }
+            } else {
+                // No stored trades - full fetch
+                console.log(`[ProfitAPI] DB MISS: Fetching full history...`);
+                const freshTrades = await getWalletHistory(walletToAnalyze, 1000);
+
+                if (freshTrades && freshTrades.length > 0) {
+                    trades = freshTrades;
+                    // Store permanently
+                    storeWalletTrades(walletToAnalyze, freshTrades).catch(e =>
+                        console.warn('[ProfitAPI] Failed to store trades:', e.message)
                     );
+                    fetchedNewTrades = true;
                 }
-            } catch (fetchError) {
-                console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
+            }
+        } catch (fetchError) {
+            console.error('[ProfitAPI] Trade fetch error:', fetchError.message);
 
-                // SOFT ERROR FOR 429 - Tell user to wait
-                if (fetchError.message.includes('429') || fetchError.message.includes('Rate Limit')) {
-                    return NextResponse.json({
-                        success: false,
-                        isLoading: true,
-                        error: 'Analysis is still loading. Please wait a moment and try again.',
-                        retryAfter: 5
-                    }, { status: 202 }); // 202 Accepted = processing
-                }
-
+            // SOFT ERROR FOR 429 - Tell user to wait
+            if (fetchError.message.includes('429') || fetchError.message.includes('Rate Limit')) {
                 return NextResponse.json({
                     success: false,
-                    error: `Helius API Error: ${fetchError.message}`,
-                    data: null
-                }, { status: 500 });
+                    isLoading: true,
+                    error: 'Analysis is still loading. Please wait a moment and try again.',
+                    retryAfter: 5
+                }, { status: 202 });
             }
+
+            return NextResponse.json({
+                success: false,
+                error: `Helius API Error: ${fetchError.message}`,
+                data: null
+            }, { status: 500 });
         }
 
         // Record usage if we seemingly got data (or just record attempt?)
