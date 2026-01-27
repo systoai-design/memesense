@@ -5,6 +5,10 @@ import { getTokenData } from '@/lib/dexscreener';
 import fs from 'fs';
 import path from 'path';
 
+// Force dynamic rendering - never generate at build time
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
     const CA = '7GCihgDB8fe6KNjn2MYtkzZcRXTQy3DbSnAPX68DwPMr';
     const logPath = path.join(process.cwd(), 'benchmark_progress.txt');
