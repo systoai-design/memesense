@@ -91,6 +91,9 @@ export async function POST(request) {
         // Usually record usage only if we return value.
         // We'll record at the end.
 
+        // Fetch user's custom label for this wallet
+        const userLabel = await getWalletLabel(user.id, walletToAnalyze).catch(() => null);
+
         // Fetch Balance (SOL)
         let balance = 0;
         try {
