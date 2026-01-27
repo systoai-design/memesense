@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getWalletCache, setWalletCache } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
