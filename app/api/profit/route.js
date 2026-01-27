@@ -239,7 +239,7 @@ export async function POST(request) {
 
         // Record Scan History
         if (!isAdmin && deviceId !== 'demo-landing') {
-            const action = depth === 'deep' ? 'deep_analysis' : 'analysis';
+            const action = 'deep_analysis';
             // We await these to ensure consistency but run them in parallel
             await Promise.all([
                 recordUsage(user.id, walletToAnalyze, action),
@@ -263,7 +263,7 @@ export async function POST(request) {
                 aiVerdict,
                 usage: {
                     remaining: usageCheck.remainingToday,
-                    type: depth
+                    type: 'deep'
                 }
             }
         });
