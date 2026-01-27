@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan } from '@/lib/db';
+import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getWalletCache, setWalletCache } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
 import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
@@ -41,16 +40,50 @@ export async function POST(request) {
 
         console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze} (Limit: ${txLimit})`);
         let trades = [];
+        let fromCache = false;
+
+        // CHECK CACHE FIRST
         try {
-            trades = await getWalletHistory(walletToAnalyze, txLimit);
-        } catch (fetchError) {
-            console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
-            // ... existing error handling ...
-            return NextResponse.json({
-                success: false,
-                error: `Helius API Error: ${fetchError.message}`,
-                data: null
-            }, { status: 500 });
+            const cachedTrades = await getWalletCache(walletToAnalyze);
+            if (cachedTrades && cachedTrades.length > 0) {
+                console.log(`[ProfitAPI] Cache HIT for ${walletToAnalyze} (${cachedTrades.length} trades)`);
+                trades = cachedTrades;
+                fromCache = true;
+            }
+        } catch (cacheError) {
+            console.warn('[ProfitAPI] Cache check failed:', cacheError.message);
+        }
+
+        // FETCH FROM HELIUS IF NOT CACHED
+        if (!fromCache) {
+            try {
+                trades = await getWalletHistory(walletToAnalyze, txLimit);
+
+                // Cache successful fetch
+                if (trades && trades.length > 0) {
+                    setWalletCache(walletToAnalyze, trades).catch(e =>
+                        console.warn('[ProfitAPI] Failed to cache trades:', e.message)
+                    );
+                }
+            } catch (fetchError) {
+                console.error('[ProfitAPI] Wallet history fetch error:', fetchError.message);
+
+                // SOFT ERROR FOR 429 - Tell user to wait
+                if (fetchError.message.includes('429') || fetchError.message.includes('Rate Limit')) {
+                    return NextResponse.json({
+                        success: false,
+                        isLoading: true,
+                        error: 'Analysis is still loading. Please wait a moment and try again.',
+                        retryAfter: 5
+                    }, { status: 202 }); // 202 Accepted = processing
+                }
+
+                return NextResponse.json({
+                    success: false,
+                    error: `Helius API Error: ${fetchError.message}`,
+                    data: null
+                }, { status: 500 });
+            }
         }
 
         // Record usage if we seemingly got data (or just record attempt?)
@@ -142,6 +175,8 @@ export async function POST(request) {
         const tokenMetadata = await metadataPromise;
 
         // 7. Inject USD Values & AI Verdict
+        // tokenMetadata and userLabel already fetched above or managed sequentially
+
         const summary = analysis; // It's an object with keys 1d, 7d, etc.
 
         // GLOBAL AI VERDICT (Based on 'all' timeframe)
@@ -209,6 +244,7 @@ export async function POST(request) {
                 tokenInfo: tokenMetadata,
                 balance,
                 solPrice,
+                userLabel, // Custom label if exists
                 aiVerdict,
                 usage: {
                     remaining: usageCheck.remainingToday,

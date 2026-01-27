@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
     ArrowLeft, Lock, TrendingUp, Clock, DollarSign, Activity,
-    Wallet, ChevronLeft, ChevronRight, Copy, Search, BarChart3, LineChart, Brain, Check, Zap
+    Wallet, ChevronLeft, ChevronRight, Copy, Search, BarChart3, LineChart, Brain, Check, Zap, Edit2, X, Save
 } from 'lucide-react';
 import LoadingScan from '../../../components/LoadingScan';
 import styles from './page.module.css';
 import BetaBadge from '@/components/BetaBadge';
+import Tooltip from '@/components/Tooltip';
+import { HelpCircle } from 'lucide-react'; // Add separate import if needed or merge with main import
 
 export default function ProfitPage() {
     const { wallet: walletParam } = useParams();
@@ -116,13 +118,21 @@ export default function ProfitPage() {
     const [scanDepth, setScanDepth] = useState('normal'); // 'normal' | 'deep'
     const [usageInfo, setUsageInfo] = useState(null);
 
+    // Label Editing State
+    const [isEditingLabel, setIsEditingLabel] = useState(false);
+    const [labelInput, setLabelInput] = useState('');
+    const [savingLabel, setSavingLabel] = useState(false);
+
     useEffect(() => {
         if (walletToAnalyze && !isWalletChecking) {
             analyzeWallet(walletToAnalyze, 'normal');
         }
     }, [walletToAnalyze, connectedWallet, isWalletChecking]);
 
-    async function analyzeWallet(address, depth = 'normal') {
+    async function analyzeWallet(address, depth = 'normal', retryCount = 0) {
+        const MAX_RETRIES = 5;
+        const RETRY_DELAY = 4000; // 4 seconds
+
         setLoading(true);
         setError(null);
         setScanDepth(depth);
@@ -144,6 +154,14 @@ export default function ProfitPage() {
 
             const json = await res.json();
 
+            // HANDLE LOADING/RATE-LIMITED RESPONSE (Auto-Retry)
+            if (json.isLoading && retryCount < MAX_RETRIES) {
+                console.log(`[Wallet] Analysis loading, retry ${retryCount + 1}/${MAX_RETRIES}...`);
+                setError(`📊 Analysis is still loading... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await new Promise(r => setTimeout(r, RETRY_DELAY));
+                return analyzeWallet(address, depth, retryCount + 1);
+            }
+
             if (!res.ok) {
                 if (json.isPremiumLocked) {
                     setIsPremium(false);
@@ -164,6 +182,10 @@ export default function ProfitPage() {
                     if (json.data.usage) {
                         setUsageInfo(json.data.usage);
                     }
+                    // Initialize label
+                    if (json.data.userLabel) {
+                        setLabelInput(json.data.userLabel);
+                    }
                 }
             }
 
@@ -178,6 +200,39 @@ export default function ProfitPage() {
             setLoading(false);
         }
     }
+
+    const handleSaveLabel = async () => {
+        setSavingLabel(true);
+        try {
+            const deviceId = localStorage.getItem('memesense_device_id') || 'unknown';
+            const userWallet = connectedWallet;
+
+            const res = await fetch('/api/user/label', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletToLabel: walletToAnalyze,
+                    label: labelInput,
+                    deviceId,
+                    userWallet
+                })
+            });
+
+            const json = await res.json();
+            if (json.success) {
+                // Optimistic update
+                setData(prev => ({ ...prev, userLabel: json.label }));
+                setIsEditingLabel(false);
+            } else {
+                alert('Failed to save label: ' + json.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error saving label');
+        } finally {
+            setSavingLabel(false);
+        }
+    };
 
     // Loading State
     if (loading) {
@@ -330,53 +385,107 @@ export default function ProfitPage() {
                                 <Wallet size={32} color="#ccff00" />
                             </div>
                             <div>
-                                <div className={styles.label} style={{ marginBottom: 4 }}>Wallet Address</div>
-                                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                                    <div className={styles.value} style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        {walletToAnalyze.slice(0, 8)}...{walletToAnalyze.slice(-8)}
-                                        <div onClick={handleCopy} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: copied ? 1 : 0.7, transition: 'opacity 0.2s' }}>
-                                            {copied ? (
-                                                <>
-                                                    <Check size={16} color="#00d47e" />
-                                                    <span style={{ fontSize: 12, color: '#00d47e', fontWeight: 700 }}>Copied</span>
-                                                </>
-                                            ) : (
-                                                <Copy size={16} />
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* STATUS BADGE - Integrated */}
-                                    {data?.aiVerdict && (
-                                        <div className={`${styles.verdictBadge} ${data.aiVerdict.status === 'PROFITABLE' ? styles.verdictProfitable :
-                                            data.aiVerdict.status === 'HIGH RISK' ? styles.verdictRisk :
-                                                styles.verdictUnprofitable
-                                            }`} style={{
-                                                fontSize: '13px',
-                                                padding: '6px 12px',
-                                                borderRadius: '20px',
-                                                borderWidth: '1px',
-                                                fontWeight: 800,
-                                                letterSpacing: '0.5px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                                background: data.aiVerdict.status === 'PROFITABLE' ? 'rgba(0, 212, 126, 0.15)' :
-                                                    data.aiVerdict.status === 'HIGH RISK' ? 'rgba(255, 171, 0, 0.15)' : 'rgba(255, 77, 77, 0.15)',
-                                                borderColor: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
-                                                    data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
-                                                color: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
-                                                    data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
-                                                boxShadow: data.aiVerdict.status === 'PROFITABLE' ? '0 0 15px rgba(0, 212, 126, 0.2)' : 'none'
-                                            }}>
-                                            {data.aiVerdict.status === 'PROFITABLE' ? <TrendingUp size={14} strokeWidth={2.5} /> : <Activity size={14} strokeWidth={2.5} />}
-                                            {data.aiVerdict.status === 'PROFITABLE' ? 'PROFITABLE' : data.aiVerdict.status}
-                                            <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: 2 }}>
-                                                {data.aiVerdict.score}/100
-                                            </span>
-                                        </div>
-                                    )}
+                                <div className={styles.label} style={{ marginBottom: 4 }}>
+                                    {data?.userLabel ? 'Wallet Label' : 'Wallet Address'}
                                 </div>
+
+                                {isEditingLabel ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={labelInput}
+                                            onChange={(e) => setLabelInput(e.target.value)}
+                                            placeholder="Enter label..."
+                                            style={{
+                                                background: 'rgba(0,0,0,0.3)',
+                                                border: '1px solid #444',
+                                                borderRadius: 4,
+                                                padding: '4px 8px',
+                                                color: 'white',
+                                                fontSize: 16,
+                                                outline: 'none'
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveLabel();
+                                                if (e.key === 'Escape') setIsEditingLabel(false);
+                                            }}
+                                        />
+                                        <button onClick={handleSaveLabel} disabled={savingLabel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#00d47e' }}>
+                                            <Save size={18} />
+                                        </button>
+                                        <button onClick={() => setIsEditingLabel(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4d' }}>
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                                        <div className={styles.value} style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            {data?.userLabel ? (
+                                                <span style={{ color: '#fff', fontWeight: 800 }}>{data.userLabel}</span>
+                                            ) : (
+                                                <span>{walletToAnalyze.slice(0, 8)}...{walletToAnalyze.slice(-8)}</span>
+                                            )}
+
+                                            <div onClick={handleCopy} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: copied ? 1 : 0.7, transition: 'opacity 0.2s' }}>
+                                                {copied ? (
+                                                    <Check size={16} color="#00d47e" />
+                                                ) : (
+                                                    <Copy size={16} />
+                                                )}
+                                            </div>
+
+                                            <div onClick={() => {
+                                                if (isPremium) {
+                                                    setIsEditingLabel(true);
+                                                    setLabelInput(data?.userLabel || '');
+                                                } else {
+                                                    router.push('/upgrade');
+                                                }
+                                            }} style={{ cursor: 'pointer', opacity: 0.5, marginLeft: 4, transition: 'opacity 0.2s' }} title="Edit Label">
+                                                <Edit2 size={14} />
+                                            </div>
+                                        </div>
+
+                                        {/* Show address small if labeled */}
+                                        {data?.userLabel && (
+                                            <div style={{ fontSize: 12, opacity: 0.5, fontFamily: 'monospace' }}>
+                                                {walletToAnalyze}
+                                            </div>
+                                        )}
+
+                                        {/* STATUS BADGE - Integrated */}
+                                        {data?.aiVerdict && (
+                                            <div className={`${styles.verdictBadge} ${data.aiVerdict.status === 'PROFITABLE' ? styles.verdictProfitable :
+                                                data.aiVerdict.status === 'HIGH RISK' ? styles.verdictRisk :
+                                                    styles.verdictUnprofitable
+                                                }`} style={{
+                                                    fontSize: '13px',
+                                                    padding: '6px 12px',
+                                                    borderRadius: '20px',
+                                                    borderWidth: '1px',
+                                                    fontWeight: 800,
+                                                    letterSpacing: '0.5px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                    background: data.aiVerdict.status === 'PROFITABLE' ? 'rgba(0, 212, 126, 0.15)' :
+                                                        data.aiVerdict.status === 'HIGH RISK' ? 'rgba(255, 171, 0, 0.15)' : 'rgba(255, 77, 77, 0.15)',
+                                                    borderColor: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
+                                                        data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
+                                                    color: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
+                                                        data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
+                                                    boxShadow: data.aiVerdict.status === 'PROFITABLE' ? '0 0 15px rgba(0, 212, 126, 0.2)' : 'none'
+                                                }}>
+                                                {data.aiVerdict.status === 'PROFITABLE' ? <TrendingUp size={14} strokeWidth={2.5} /> : <Activity size={14} strokeWidth={2.5} />}
+                                                {data.aiVerdict.status === 'PROFITABLE' ? 'PROFITABLE' : data.aiVerdict.status}
+                                                <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: 2 }}>
+                                                    {data.aiVerdict.score}/100
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -558,7 +667,12 @@ export default function ProfitPage() {
                                 </span>
                             </div>
                             <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Safe Copy Margin</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span className={styles.statLabel}>Safe Copy Margin</span>
+                                    <Tooltip text="Median ROI. A high margin (e.g. >30%) protects you from copy-trading slippage.">
+                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
+                                    </Tooltip>
+                                </div>
                                 <span className={styles.statValue}>
                                     {data.summary[timeWindow].safeCopyMargin?.toFixed(1) || '0.0'}%
                                 </span>
@@ -602,20 +716,37 @@ export default function ProfitPage() {
                                 <Brain size={18} /> Copy Strategy
                             </div>
                             <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Consistency Rating</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span className={styles.statLabel}>Consistency Rating</span>
+                                    <Tooltip text="Win rate stability over 10+ trades. High consistency means predictable performance.">
+                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
+                                    </Tooltip>
+                                </div>
                                 <span className={styles.statValue} style={{ color: (data.summary[timeWindow].consistencyRating || 0) > 70 ? '#00d47e' : (data.summary[timeWindow].consistencyRating || 0) > 40 ? 'gold' : '#ff4d4d' }}>
                                     {(data.summary[timeWindow].consistencyRating || 0).toFixed(0)}/100
                                 </span>
                             </div>
                             <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Diamond Hands</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span className={styles.statLabel}>Diamond Hands</span>
+                                    <Tooltip text="Hold time score. 100 = Holds >24h. 0 = Sells <1min.">
+                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
+                                    </Tooltip>
+                                </div>
                                 <span className={styles.statValue} style={{ color: '#a366ff' }}>
                                     {(data.summary[timeWindow].diamondHandRating || 0).toFixed(0)}/100
                                 </span>
                             </div>
                             <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Sniper Score</span>
-                                <span className={styles.statValue} style={{ opacity: 0.5 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span className={styles.statLabel}>Sniper Score</span>
+                                    <Tooltip text="% of trades entered within 15 minutes of token launch.">
+                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
+                                    </Tooltip>
+                                </div>
+                                <span className={styles.statValue} style={{
+                                    color: (data.summary[timeWindow].sniperEfficiency || 0) > 50 ? '#00d47e' : (data.summary[timeWindow].sniperEfficiency !== null ? 'white' : 'rgba(255,255,255,0.5)')
+                                }}>
                                     {data.summary[timeWindow].sniperEfficiency !== null ? data.summary[timeWindow].sniperEfficiency + '%' : 'N/A'}
                                 </span>
                             </div>
