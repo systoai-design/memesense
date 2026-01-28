@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades } from '@/lib/db';
+import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades, logUserScan } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { getWalletSwaps } from '@/lib/solscan';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
@@ -291,7 +291,14 @@ export async function POST(request) {
                     name: 'Wallet', // Default name, user can label it later
                     symbol: 'SOL',
                     imageUrl: null
-                }, 'wallet')
+                }, 'wallet'),
+                // LOG TO PERMANENT HISTORY
+                logUserScan(user.id, walletToAnalyze, {
+                    pnl: analysis['all']?.totalRealizedPnL || 0,
+                    winRate: analysis['all']?.winRate || 0,
+                    trades: analysis['all']?.totalTrades || 0,
+                    solPrice: solPrice || 0
+                })
             ]);
         }
 
