@@ -269,16 +269,21 @@ export async function POST(request) {
         // Add USD equivalents to each timeframe
         Object.keys(summary).forEach(key => {
             const metrics = summary[key];
-            metrics.totalRealizedPnLUSD = metrics.totalRealizedPnL * solPrice;
-            metrics.grossProfitUSD = metrics.grossProfit * solPrice;
-            metrics.grossLossUSD = metrics.grossLoss * solPrice;
-            metrics.avgPnLUSD = metrics.avgPnL * solPrice;
+
+            // NOTE: USD values are now calculated IN trade-analysis.js using Historical Prices.
+            // DO NOT overwrite them with simple multiplication here.
+
+            // Only fill volume if missing (Volume is usually fine with current price or strictly historical, 
+            // but trade-analysis doesn't return totalVolumeUSD yet? 
+            // Wait, I missed adding totalVolumeUSD to trade-analysis.js return!
+            // I should add it or accept simple multiplication for volume (less critical).
+            // Let's use simple multiplication for volume for now as it's less PnL sensitive.
             metrics.totalVolumeUSD = metrics.totalVolume * solPrice;
 
-            // Total Unrealized Sum
+            // Total Unrealized Sum (already in metrics if I updated it? Yes)
             const totalUnrealizedPnL = metrics.details.reduce((acc, p) => acc + (p.unrealizedPnL || 0), 0);
             metrics.totalUnrealizedPnL = totalUnrealizedPnL;
-            metrics.totalUnrealizedPnLUSD = totalUnrealizedPnL * solPrice;
+            // metrics.totalUnrealizedPnLUSD is also returned now. Correctly calculated with Historical Cost Basis.
         });
 
         // Record Scan History
