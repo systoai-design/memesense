@@ -92,7 +92,7 @@ export async function POST(request) {
                 try {
                     const freshTrades = await getWalletSwaps(walletToAnalyze, {
                         pageSize: 100,
-                        maxPages: 10
+                        maxPages: 50  // Full wallet lifecycle
                     });
                     dataSource = 'solscan';
 
