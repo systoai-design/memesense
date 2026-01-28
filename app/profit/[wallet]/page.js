@@ -528,55 +528,24 @@ export default function ProfitPage() {
                     </div>
                 </div>
 
-                {/* Quota & Deep Scan Banner */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, marginBottom: 24 }}>
-                    {/* Quota Badge */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                            padding: '8px 12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            borderRadius: 8,
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            fontSize: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6
-                        }}>
-                            <Activity size={14} color="#888" />
-                            <span style={{ color: '#aaa' }}>Daily Scans:</span>
-                            <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
-                                {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
-                            </strong>
-                        </div>
+                {/* Quota Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                    <div style={{
+                        padding: '8px 12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                    }}>
+                        <Activity size={14} color="#888" />
+                        <span style={{ color: '#aaa' }}>Daily Scans:</span>
+                        <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
+                            {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
+                        </strong>
                     </div>
-
-                    {/* Deep Scan CTA */}
-                    {scanDepth === 'normal' && (
-                        <button
-                            onClick={() => {
-                                if (isPremium) {
-                                    analyzeWallet(walletToAnalyze, 'deep');
-                                } else {
-                                    router.push('/upgrade');
-                                }
-                            }}
-                            className="btn"
-                            style={{
-                                background: isPremium ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${isPremium ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`,
-                                color: isPremium ? '#c4b5fd' : '#aaa',
-                                padding: '8px 16px',
-                                fontSize: 13,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                cursor: 'pointer'
-                            }}
-                        >
-                            {isPremium ? <Zap size={14} /> : <Lock size={14} />}
-                            {isPremium ? 'Run Deep Scan (1000 txs)' : 'Unlock Deep Scan (Premium)'}
-                        </button>
-                    )}
                 </div>
 
                 {/* Time Window Tabs */}
