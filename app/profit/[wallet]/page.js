@@ -528,25 +528,27 @@ export default function ProfitPage() {
                     </div>
                 </div>
 
-                {/* Quota Badge */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-                    <div style={{
-                        padding: '8px 12px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: 8,
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        fontSize: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                    }}>
-                        <Activity size={14} color="#888" />
-                        <span style={{ color: '#aaa' }}>Daily Scans:</span>
-                        <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
-                            {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
-                        </strong>
+                {/* Quota Badge (Hidden for Premium) */}
+                {!isPremium && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                        <div style={{
+                            padding: '8px 12px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            fontSize: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                        }}>
+                            <Activity size={14} color="#888" />
+                            <span style={{ color: '#aaa' }}>Daily Scans:</span>
+                            <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
+                                {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
+                            </strong>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Time Window Tabs */}
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
