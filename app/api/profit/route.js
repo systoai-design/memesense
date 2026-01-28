@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
+import { getWalletSwaps } from '@/lib/solscan';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
 import { getBatchTokenPrices, getTokenData } from '@/lib/dexscreener';
 
@@ -35,13 +36,14 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        // 2. PERMANENT STORAGE: Check DB first, then fetch only new trades
+        // 2. HYBRID FETCH: Solscan (primary) with Helius (fallback)
         console.log(`[ProfitAPI] Analyzing wallet: ${walletToAnalyze}`);
         let trades = [];
         let fetchedNewTrades = false;
+        let dataSource = 'unknown';
 
         try {
-            // Get stored trades from Turso
+            // Check stored trades first
             const storedTrades = await getStoredTrades(walletToAnalyze);
             const latestTimestamp = await getLatestTradeTimestamp(walletToAnalyze);
 
@@ -49,35 +51,76 @@ export async function POST(request) {
                 console.log(`[ProfitAPI] DB HIT: ${storedTrades.length} trades stored. Latest: ${new Date(latestTimestamp).toISOString()}`);
                 trades = storedTrades;
 
-                // Fetch only NEW trades since last stored
+                // Fetch only NEW trades since last stored (try Solscan first)
                 try {
-                    const newTrades = await getWalletHistory(walletToAnalyze, 1000, latestTimestamp);
+                    const newTrades = await getWalletSwaps(walletToAnalyze, {
+                        fromTime: latestTimestamp,
+                        pageSize: 100,
+                        maxPages: 5
+                    });
+                    dataSource = 'solscan';
+
                     if (newTrades && newTrades.length > 0) {
-                        console.log(`[ProfitAPI] Found ${newTrades.length} new trades`);
-                        // Store new trades
+                        console.log(`[ProfitAPI] Found ${newTrades.length} new trades via Solscan`);
                         await storeWalletTrades(walletToAnalyze, newTrades);
-                        // Combine: new trades first (most recent), then stored
                         trades = [...newTrades, ...storedTrades];
                         fetchedNewTrades = true;
                     }
-                } catch (incrementalError) {
-                    console.warn('[ProfitAPI] Incremental fetch failed, using stored data:', incrementalError.message);
-                    // Continue with stored trades only
+                } catch (solscanError) {
+                    console.warn('[ProfitAPI] Solscan failed, trying Helius fallback:', solscanError.message);
+
+                    // Fallback to Helius
+                    try {
+                        const newTrades = await getWalletHistory(walletToAnalyze, 1000, latestTimestamp);
+                        dataSource = 'helius';
+
+                        if (newTrades && newTrades.length > 0) {
+                            console.log(`[ProfitAPI] Found ${newTrades.length} new trades via Helius`);
+                            await storeWalletTrades(walletToAnalyze, newTrades);
+                            trades = [...newTrades, ...storedTrades];
+                            fetchedNewTrades = true;
+                        }
+                    } catch (heliusError) {
+                        console.warn('[ProfitAPI] Helius fallback also failed:', heliusError.message);
+                        // Continue with stored trades only
+                    }
                 }
             } else {
-                // No stored trades - full fetch
-                console.log(`[ProfitAPI] DB MISS: Fetching full history...`);
-                const freshTrades = await getWalletHistory(walletToAnalyze, 1000);
+                // No stored trades - full fetch via Solscan
+                console.log(`[ProfitAPI] DB MISS: Fetching full history via Solscan...`);
 
-                if (freshTrades && freshTrades.length > 0) {
-                    trades = freshTrades;
-                    // Store permanently
-                    storeWalletTrades(walletToAnalyze, freshTrades).catch(e =>
-                        console.warn('[ProfitAPI] Failed to store trades:', e.message)
-                    );
-                    fetchedNewTrades = true;
+                try {
+                    const freshTrades = await getWalletSwaps(walletToAnalyze, {
+                        pageSize: 100,
+                        maxPages: 10
+                    });
+                    dataSource = 'solscan';
+
+                    if (freshTrades && freshTrades.length > 0) {
+                        trades = freshTrades;
+                        storeWalletTrades(walletToAnalyze, freshTrades).catch(e =>
+                            console.warn('[ProfitAPI] Failed to store trades:', e.message)
+                        );
+                        fetchedNewTrades = true;
+                    }
+                } catch (solscanError) {
+                    console.warn('[ProfitAPI] Solscan failed, trying Helius fallback:', solscanError.message);
+
+                    // Fallback to Helius
+                    const freshTrades = await getWalletHistory(walletToAnalyze, 1000);
+                    dataSource = 'helius';
+
+                    if (freshTrades && freshTrades.length > 0) {
+                        trades = freshTrades;
+                        storeWalletTrades(walletToAnalyze, freshTrades).catch(e =>
+                            console.warn('[ProfitAPI] Failed to store trades:', e.message)
+                        );
+                        fetchedNewTrades = true;
+                    }
                 }
             }
+
+            console.log(`[ProfitAPI] Final: ${trades.length} trades from ${dataSource}`);
         } catch (fetchError) {
             console.error('[ProfitAPI] Trade fetch error:', fetchError.message);
 
@@ -93,7 +136,7 @@ export async function POST(request) {
 
             return NextResponse.json({
                 success: false,
-                error: `Helius API Error: ${fetchError.message}`,
+                error: `API Error: ${fetchError.message}`,
                 data: null
             }, { status: 500 });
         }
