@@ -227,7 +227,8 @@ export async function POST(request) {
         ]);
 
         // 5b. Re-Analyze with Prices
-        const analysis = analyzeTimeWindows(trades, priceMap); // Make sure analyzeTimeWindows passes priceMap 
+        // 5b. Re-Analyze with Prices
+        const analysis = analyzeTimeWindows(trades, priceMap, solPrice);
 
         // 7. Await Metadata (Non-blocking for analysis, but needed for response)
         const tokenMetadata = await metadataPromise;
