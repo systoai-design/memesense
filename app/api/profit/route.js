@@ -87,26 +87,11 @@ export async function POST(request) {
                 }
             } else {
                 // No stored trades - full fetch via Solscan
-                console.log(`[ProfitAPI] DB MISS: Fetching full history via Solscan...`);
+                // No stored trades - Fetch needed
+                console.log(`[ProfitAPI] DB MISS: Fetching history via Helius (Free Tier Preferred)...`);
 
                 try {
-                    const freshTrades = await getWalletSwaps(walletToAnalyze, {
-                        pageSize: 100,
-                        maxPages: 50  // Full wallet lifecycle
-                    });
-                    dataSource = 'solscan';
-
-                    if (freshTrades && freshTrades.length > 0) {
-                        trades = freshTrades;
-                        storeWalletTrades(walletToAnalyze, freshTrades).catch(e =>
-                            console.warn('[ProfitAPI] Failed to store trades:', e.message)
-                        );
-                        fetchedNewTrades = true;
-                    }
-                } catch (solscanError) {
-                    console.warn('[ProfitAPI] Solscan failed, trying Helius fallback:', solscanError.message);
-
-                    // Fallback to Helius
+                    // PRIMARY: Helius (Free usage supported)
                     const freshTrades = await getWalletHistory(walletToAnalyze, 1000);
                     dataSource = 'helius';
 
@@ -116,29 +101,33 @@ export async function POST(request) {
                             console.warn('[ProfitAPI] Failed to store trades:', e.message)
                         );
                         fetchedNewTrades = true;
+                    } else {
+                        // Fallback or Empty?
+                        // If Helius empty, maybe new wallet?
                     }
+
+                    // SOLSCAN (PRO ONLY) - Disabled/Deprioritized for free users
+                    // Only try if we have a specific PRO key logic, otherwise skip to avoid 401s
+                    // const solscanTrades = await getWalletSwaps(...) 
+
+                } catch (fetchError) {
+                    console.error('[ProfitAPI] Helius fetch failed:', fetchError.message);
+
+                    // SOFT ERROR FOR 429
+                    if (fetchError.message.includes('429')) {
+                        return NextResponse.json({
+                            success: false, isLoading: true, error: 'Rate limit. Please wait.', retryAfter: 5
+                        }, { status: 202 });
+                    }
+                    // Throw to outer catch
+                    throw fetchError;
                 }
             }
 
             console.log(`[ProfitAPI] Final: ${trades.length} trades from ${dataSource}`);
         } catch (fetchError) {
             console.error('[ProfitAPI] Trade fetch error:', fetchError.message);
-
-            // SOFT ERROR FOR 429 - Tell user to wait
-            if (fetchError.message.includes('429') || fetchError.message.includes('Rate Limit')) {
-                return NextResponse.json({
-                    success: false,
-                    isLoading: true,
-                    error: 'Analysis is still loading. Please wait a moment and try again.',
-                    retryAfter: 5
-                }, { status: 202 });
-            }
-
-            return NextResponse.json({
-                success: false,
-                error: `API Error: ${fetchError.message}`,
-                data: null
-            }, { status: 500 });
+            return NextResponse.json({ success: false, error: `API Error: ${fetchError.message}` }, { status: 500 });
         }
 
         // Record usage if we seemingly got data (or just record attempt?)
