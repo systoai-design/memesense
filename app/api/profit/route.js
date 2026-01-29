@@ -92,7 +92,8 @@ export async function POST(request) {
 
                 try {
                     // PRIMARY: Helius (Free usage supported)
-                    const freshTrades = await getWalletHistory(walletToAnalyze, 1000);
+                    // Increased limit to 3000 to catch older "Sells" preventing Ghost Open Positions
+                    const freshTrades = await getWalletHistory(walletToAnalyze, 3000);
                     dataSource = 'helius';
 
                     if (freshTrades && freshTrades.length > 0) {
