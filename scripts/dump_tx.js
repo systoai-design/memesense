@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fetch from 'node-fetch';
 
 const SIG = '4eG5v1sSYQt6NVZGF8CxoQPJonZAUKonwXfekeMQyX6iRujzyKvsy5vs57hfe4q4SEebKCDF4WebRKEhBE1uFDji';
-const API_KEY = '4bd4311b-8cf4-4f9e-9aac-e46f2375008d';
+const API_KEY = '3e6f58e1-3e87-41a3-ad97-06b99bfd0ec9';
 
 async function dump() {
     console.log("Fetching TX:", SIG);
