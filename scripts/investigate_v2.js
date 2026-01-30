@@ -1,4 +1,4 @@
-process.env.HELIUS_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=4bd4311b-8cf4-4f9e-9aac-e46f2375008d';
+process.env.HELIUS_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=3e6f58e1-3e87-41a3-ad97-06b99bfd0ec9';
 // import 'dotenv/config'; 
 import { getWalletHistory } from '../lib/helius.js';
 import { calculateWalletMetrics, analyzeTimeWindows } from '../lib/trade-analysis.js';
