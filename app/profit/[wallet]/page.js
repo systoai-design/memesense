@@ -11,7 +11,10 @@ import LoadingScan from '../../../components/LoadingScan';
 import styles from './page.module.css';
 import BetaBadge from '@/components/BetaBadge';
 import Tooltip from '@/components/Tooltip';
-import { HelpCircle } from 'lucide-react'; // Add separate import if needed or merge with main import
+import { HelpCircle } from 'lucide-react';
+import ProfitabilityCard from '../../../components/ProfitabilityCard';
+import CompactTradeTable from '../../../components/CompactTradeTable';
+import PnLCalendar from '../../../components/PnLCalendar';
 
 export default function ProfitPage() {
     const { wallet: walletParam } = useParams();
@@ -109,6 +112,9 @@ export default function ProfitPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [errorReason, setErrorReason] = useState(null);
+
+    // Restored State Variables
     const [isPremium, setIsPremium] = useState(true);
     const [debugInfo, setDebugInfo] = useState(null);
     const [timeWindow, setTimeWindow] = useState('7d');
@@ -136,6 +142,7 @@ export default function ProfitPage() {
         setLoading(true);
         setError(null);
         setScanDepth(depth);
+        setErrorReason(null); // Clear previous errors
 
         try {
             const deviceId = localStorage.getItem('memesense_device_id') || 'unknown';
@@ -157,7 +164,7 @@ export default function ProfitPage() {
             // HANDLE LOADING/RATE-LIMITED RESPONSE (Auto-Retry)
             if (json.isLoading && retryCount < MAX_RETRIES) {
                 console.log(`[Wallet] Analysis loading, retry ${retryCount + 1}/${MAX_RETRIES}...`);
-                setError(`📊 Analysis is still loading... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                // Keep loading state true, maybe show partial progress if supported later
                 await new Promise(r => setTimeout(r, RETRY_DELAY));
                 return analyzeWallet(address, depth, retryCount + 1);
             }
@@ -165,6 +172,7 @@ export default function ProfitPage() {
             if (!res.ok) {
                 if (json.isPremiumLocked) {
                     setIsPremium(false);
+                    if (json.error) setErrorReason(json.error);
                 } else {
                     setError(json.error || 'Analysis failed');
                 }
@@ -191,7 +199,7 @@ export default function ProfitPage() {
 
             // Debug Info for Lock Screen
             if (json.debugInfo) {
-                setDebugInfo(json.debugInfo);
+                // Debug logic handled in render
             }
 
         } catch (e) {
@@ -234,39 +242,15 @@ export default function ProfitPage() {
         }
     };
 
-    // Loading State
-    if (loading) {
-        return (
-            <div className={styles.container}>
-                <div className={styles.loadingState}>
-                    <div className={styles.loadingContent}>
-                        <div className={styles.spinner}></div>
-                        <h2>{scanDepth === 'deep' ? 'Running Deep Analysis...' : 'Analyzing Wallet History...'}</h2>
-                        <p>Fetching on-chain data and checking profitability</p>
-                        <div className={styles.loadingSteps}>
-                            <div className={styles.step}>
-                                <span className={styles.stepIcon}><Wallet size={16} /></span>
-                                <span>Fetching {scanDepth === 'deep' ? '1,000' : 'recent'} transactions...</span>
-                            </div>
-                            <div className={styles.step}>
-                                <span className={styles.stepIcon}><Search size={16} /></span>
-                                <span>Identifying open positions...</span>
-                            </div>
-                            <div className={styles.step}>
-                                <span className={styles.stepIcon}><DollarSign size={16} /></span>
-                                <span>Calculating global PnL & Win Rate...</span>
-                            </div>
-                            <div className={styles.step}>
-                                <span className={styles.stepIcon}><LineChart size={16} /></span>
-                                <span>Generating profit report...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // Skeleton Component Helper
+    const SkeletonPulse = ({ width, height, style }) => (
+        <div style={{
+            width, height, background: 'rgba(255,255,255,0.05)', borderRadius: 6,
+            animation: 'pulse 1.5s infinite ease-in-out', ...style
+        }}></div>
+    );
 
+    // ... (inside Render Lock Screen) ...
     // Premium Lock State
     if (!isPremium) {
         return (
@@ -275,11 +259,11 @@ export default function ProfitPage() {
                 <div className={styles.lockOverlay}>
                     <div className={styles.lockContent}>
                         <Lock className={styles.lockIcon} size={64} />
-                        <h2>Premium Feature</h2>
+                        <h2>{errorReason ? 'Limit Reached' : 'Premium Feature'}</h2>
 
                         {!isWalletConnected ? (
                             <>
-                                <p>Unlock the Wallet Profitability Tracker by connecting your Premium wallet.</p>
+                                <p>{errorReason || 'Unlock the Wallet Profitability Tracker by connecting your Premium wallet.'}</p>
                                 <button className={styles.upgradeBtn} onClick={connectWallet} style={{ background: '#00d47e', color: '#000' }}>
                                     <Wallet size={18} /> Connect Wallet to Unlock
                                 </button>
@@ -289,7 +273,7 @@ export default function ProfitPage() {
                             </>
                         ) : (
                             <>
-                                <p>Your connected wallet does not have Premium access.</p>
+                                <p>{errorReason || 'Your connected wallet does not have Premium access.'}</p>
                                 <button className={styles.upgradeBtn} onClick={() => router.push('/upgrade')}>
                                     Upgrade Now
                                 </button>
@@ -375,489 +359,279 @@ export default function ProfitPage() {
                 </div>
             </div>
 
+            {/* --- DASHBOARD CONTENT --- */}
             <div className={styles.content}>
 
-                <div className={styles.glassCard} style={{ marginBottom: 24, padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
-                        {/* Left: Wallet Info + Badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
-                            <div className={styles.walletIcon}>
-                                <Wallet size={32} color="#ccff00" />
-                            </div>
-                            <div>
-                                <div className={styles.label} style={{ marginBottom: 4 }}>
-                                    {data?.userLabel ? 'Wallet Label' : 'Wallet Address'}
-                                </div>
-
-                                {isEditingLabel ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            value={labelInput}
-                                            onChange={(e) => setLabelInput(e.target.value)}
-                                            placeholder="Enter label..."
-                                            style={{
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid #444',
-                                                borderRadius: 4,
-                                                padding: '4px 8px',
-                                                color: 'white',
-                                                fontSize: 16,
-                                                outline: 'none'
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleSaveLabel();
-                                                if (e.key === 'Escape') setIsEditingLabel(false);
-                                            }}
-                                        />
-                                        <button onClick={handleSaveLabel} disabled={savingLabel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#00d47e' }}>
-                                            <Save size={18} />
-                                        </button>
-                                        <button onClick={() => setIsEditingLabel(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4d' }}>
-                                            <X size={18} />
-                                        </button>
+                {/* Loading Skeleton State */}
+                {loading && !data && (
+                    <>
+                        {/* Header/Summary Skeleton */}
+                        <div className={styles.glassCard} style={{ marginBottom: 24, padding: '24px' }}>
+                            <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                                <SkeletonPulse width={60} height={60} style={{ borderRadius: '50%' }} />
+                                <div style={{ flex: 1 }}>
+                                    <SkeletonPulse width={150} height={24} style={{ marginBottom: 12 }} />
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <SkeletonPulse width={100} height={32} style={{ borderRadius: 20 }} />
+                                        <SkeletonPulse width={100} height={32} style={{ borderRadius: 20 }} />
                                     </div>
-                                ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                                        <div className={styles.value} style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            {data?.userLabel ? (
-                                                <span style={{ color: '#fff', fontWeight: 800 }}>{data.userLabel}</span>
-                                            ) : (
-                                                <span>{walletToAnalyze.slice(0, 8)}...{walletToAnalyze.slice(-8)}</span>
-                                            )}
+                                </div>
+                            </div>
+                        </div>
 
-                                            <div onClick={handleCopy} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: copied ? 1 : 0.7, transition: 'opacity 0.2s' }}>
-                                                {copied ? (
-                                                    <Check size={16} color="#00d47e" />
-                                                ) : (
-                                                    <Copy size={16} />
-                                                )}
-                                            </div>
+                        {/* Profit Card Skeleton */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
+                            <SkeletonPulse width="100%" height={280} />
+                            <SkeletonPulse width="100%" height={280} />
+                            <SkeletonPulse width="100%" height={280} />
+                        </div>
 
-                                            <div onClick={() => {
-                                                if (isPremium) {
-                                                    setIsEditingLabel(true);
-                                                    setLabelInput(data?.userLabel || '');
-                                                } else {
-                                                    router.push('/upgrade');
-                                                }
-                                            }} style={{ cursor: 'pointer', opacity: 0.5, marginLeft: 4, transition: 'opacity 0.2s' }} title="Edit Label">
-                                                <Edit2 size={14} />
-                                            </div>
+                        {/* Table Skeleton */}
+                        <div className={styles.tableCard}>
+                            <SkeletonPulse width={200} height={32} style={{ marginBottom: 20 }} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {[1, 2, 3, 4, 5].map(i => (
+                                    <SkeletonPulse key={i} width="100%" height={50} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Add Pulse Animation Style globally if needed, or inline */}
+                        <style jsx global>{`
+                            @keyframes pulse {
+                                0% { opacity: 0.6; }
+                                50% { opacity: 0.3; }
+                                100% { opacity: 0.6; }
+                            }
+                        `}</style>
+                    </>
+                )}
+
+                {/* Real Data Render */}
+                {!loading && data && (
+                    <>
+                        <div className={styles.glassCard} style={{ marginBottom: 24, padding: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+                                {/* Left: Wallet Info + Badge */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
+                                    <div className={styles.walletIcon}>
+                                        <Wallet size={32} color="#ccff00" />
+                                    </div>
+                                    <div>
+                                        <div className={styles.label} style={{ marginBottom: 4 }}>
+                                            {data?.userLabel ? 'Wallet Label' : 'Wallet Address'}
                                         </div>
 
-                                        {/* Show address small if labeled */}
-                                        {data?.userLabel && (
-                                            <div style={{ fontSize: 12, opacity: 0.5, fontFamily: 'monospace' }}>
-                                                {walletToAnalyze}
+                                        {isEditingLabel ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    value={labelInput}
+                                                    onChange={(e) => setLabelInput(e.target.value)}
+                                                    placeholder="Enter label..."
+                                                    style={{
+                                                        background: 'rgba(0,0,0,0.3)',
+                                                        border: '1px solid #444',
+                                                        borderRadius: 4,
+                                                        padding: '4px 8px',
+                                                        color: 'white',
+                                                        fontSize: 16,
+                                                        outline: 'none'
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleSaveLabel();
+                                                        if (e.key === 'Escape') setIsEditingLabel(false);
+                                                    }}
+                                                />
+                                                <button onClick={handleSaveLabel} disabled={savingLabel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#00d47e' }}>
+                                                    <Save size={18} />
+                                                </button>
+                                                <button onClick={() => setIsEditingLabel(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4d' }}>
+                                                    <X size={18} />
+                                                </button>
                                             </div>
-                                        )}
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                                                <div className={styles.value} style={{ fontSize: 'clamp(14px, 4vw, 20px)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    {data?.userLabel ? (
+                                                        <span style={{ color: '#fff', fontWeight: 800 }}>{data.userLabel}</span>
+                                                    ) : (
+                                                        <span>{walletToAnalyze.slice(0, 8)}...{walletToAnalyze.slice(-8)}</span>
+                                                    )}
 
-                                        {/* STATUS BADGE - Integrated */}
-                                        {data?.aiVerdict && (
-                                            <div className={`${styles.verdictBadge} ${data.aiVerdict.status === 'PROFITABLE' ? styles.verdictProfitable :
-                                                data.aiVerdict.status === 'HIGH RISK' ? styles.verdictRisk :
-                                                    styles.verdictUnprofitable
-                                                }`} style={{
-                                                    fontSize: '13px',
-                                                    padding: '6px 12px',
-                                                    borderRadius: '20px',
-                                                    borderWidth: '1px',
-                                                    fontWeight: 800,
-                                                    letterSpacing: '0.5px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 6,
-                                                    background: data.aiVerdict.status === 'PROFITABLE' ? 'rgba(0, 212, 126, 0.15)' :
-                                                        data.aiVerdict.status === 'HIGH RISK' ? 'rgba(255, 171, 0, 0.15)' : 'rgba(255, 77, 77, 0.15)',
-                                                    borderColor: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
-                                                        data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
-                                                    color: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
-                                                        data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
-                                                    boxShadow: data.aiVerdict.status === 'PROFITABLE' ? '0 0 15px rgba(0, 212, 126, 0.2)' : 'none'
-                                                }}>
-                                                {data.aiVerdict.status === 'PROFITABLE' ? <TrendingUp size={14} strokeWidth={2.5} /> : <Activity size={14} strokeWidth={2.5} />}
-                                                {data.aiVerdict.status === 'PROFITABLE' ? 'PROFITABLE' : data.aiVerdict.status}
-                                                <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: 2 }}>
-                                                    {data.aiVerdict.score}/100
-                                                </span>
+                                                    <div onClick={handleCopy} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: copied ? 1 : 0.7, transition: 'opacity 0.2s' }}>
+                                                        {copied ? (
+                                                            <Check size={16} color="#00d47e" />
+                                                        ) : (
+                                                            <Copy size={16} />
+                                                        )}
+                                                    </div>
+
+                                                    <div onClick={() => {
+                                                        if (isPremium) {
+                                                            setIsEditingLabel(true);
+                                                            setLabelInput(data?.userLabel || '');
+                                                        } else {
+                                                            router.push('/upgrade');
+                                                        }
+                                                    }} style={{ cursor: 'pointer', opacity: 0.5, marginLeft: 4, transition: 'opacity 0.2s' }} title="Edit Label">
+                                                        <Edit2 size={14} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Show address small if labeled */}
+                                                {data?.userLabel && (
+                                                    <div style={{ fontSize: 12, opacity: 0.5, fontFamily: 'monospace' }}>
+                                                        {walletToAnalyze}
+                                                    </div>
+                                                )}
+
+                                                {/* STATUS BADGE - Integrated */}
+                                                {data?.aiVerdict && (
+                                                    <div className={`${styles.verdictBadge} ${data.aiVerdict.status === 'PROFITABLE' ? styles.verdictProfitable :
+                                                        data.aiVerdict.status === 'HIGH RISK' ? styles.verdictRisk :
+                                                            styles.verdictUnprofitable
+                                                        }`} style={{
+                                                            fontSize: '13px',
+                                                            padding: '6px 12px',
+                                                            borderRadius: '20px',
+                                                            borderWidth: '1px',
+                                                            fontWeight: 800,
+                                                            letterSpacing: '0.5px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 6,
+                                                            background: data.aiVerdict.status === 'PROFITABLE' ? 'rgba(0, 212, 126, 0.15)' :
+                                                                data.aiVerdict.status === 'HIGH RISK' ? 'rgba(255, 171, 0, 0.15)' : 'rgba(255, 77, 77, 0.15)',
+                                                            borderColor: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
+                                                                data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
+                                                            color: data.aiVerdict.status === 'PROFITABLE' ? '#00d47e' :
+                                                                data.aiVerdict.status === 'HIGH RISK' ? '#ffab00' : '#ff4d4d',
+                                                            boxShadow: data.aiVerdict.status === 'PROFITABLE' ? '0 0 15px rgba(0, 212, 126, 0.2)' : 'none'
+                                                        }}>
+                                                        {data.aiVerdict.status === 'PROFITABLE' ? <TrendingUp size={14} strokeWidth={2.5} /> : <Activity size={14} strokeWidth={2.5} />}
+                                                        {data.aiVerdict.status === 'PROFITABLE' ? 'PROFITABLE' : data.aiVerdict.status}
+                                                        <span style={{ opacity: 0.6, fontSize: '11px', marginLeft: 2 }}>
+                                                            {data.aiVerdict.score}/100
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
+
+                                {/* Right: Balance & Actions */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                                    {/* Copytrade Button */}
+                                    <a
+                                        href="https://t.me/maestro?start=r-yourjesustrader"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn"
+                                        style={{
+                                            background: 'linear-gradient(45deg, #00C2FF, #00EAFF)',
+                                            color: '#000',
+                                            fontWeight: 'bold',
+                                            border: 'none',
+                                            padding: '8px 16px',
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            textDecoration: 'none',
+                                            fontSize: '13px',
+                                            boxShadow: '0 0 15px rgba(0, 194, 255, 0.3)'
+                                        }}
+                                    >
+                                        <Zap size={16} style={{ fill: 'currentColor' }} />
+                                        Copytrade This Wallet
+                                    </a>
+
+                                    {data?.balance !== undefined && (
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div className={styles.label}>Balance</div>
+                                            <div className={styles.value} style={{ fontSize: 28, color: '#ccff00', fontWeight: 700, letterSpacing: '-0.5px' }}>
+                                                {data.balance.toFixed(2)} <span style={{ fontSize: 16, opacity: 0.8 }}>SOL</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Right: Balance & Actions */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                            {/* Copytrade Button */}
-                            <a
-                                href="https://t.me/maestro?start=r-yourjesustrader"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn"
-                                style={{
-                                    background: 'linear-gradient(45deg, #00C2FF, #00EAFF)',
-                                    color: '#000',
-                                    fontWeight: 'bold',
-                                    border: 'none',
-                                    padding: '8px 16px',
-                                    borderRadius: '8px',
+                        {/* Quota Badge (Hidden for Premium) */}
+                        {!isPremium && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                                <div style={{
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    fontSize: 12,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 6,
-                                    textDecoration: 'none',
-                                    fontSize: '13px',
-                                    boxShadow: '0 0 15px rgba(0, 194, 255, 0.3)'
-                                }}
-                            >
-                                <Zap size={16} style={{ fill: 'currentColor' }} />
-                                Copytrade This Wallet
-                            </a>
-
-                            {data?.balance !== undefined && (
-                                <div style={{ textAlign: 'right' }}>
-                                    <div className={styles.label}>Balance</div>
-                                    <div className={styles.value} style={{ fontSize: 28, color: '#ccff00', fontWeight: 700, letterSpacing: '-0.5px' }}>
-                                        {data.balance.toFixed(2)} <span style={{ fontSize: 16, opacity: 0.8 }}>SOL</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Quota Badge (Hidden for Premium) */}
-                {!isPremium && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-                        <div style={{
-                            padding: '8px 12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            borderRadius: 8,
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            fontSize: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6
-                        }}>
-                            <Activity size={14} color="#888" />
-                            <span style={{ color: '#aaa' }}>Daily Scans:</span>
-                            <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
-                                {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
-                            </strong>
-                        </div>
-                    </div>
-                )}
-
-                {/* Time Window Tabs */}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                    {['1d', '7d', '14d', '30d', 'all'].map(t => (
-                        <button
-                            key={t}
-                            onClick={() => setTimeWindow(t)}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: 8,
-                                background: timeWindow === t ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                                color: timeWindow === t ? 'black' : 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                fontSize: 13
-                            }}
-                        >
-                            {t === 'all' ? 'All Time' : `Last ${t}`}
-                        </button>
-                    ))}
-                </div>
-
-                {/* --- DASHBOARD METRICS GRID --- */}
-                {data?.summary?.[timeWindow] && (
-                    <div className={styles.metricsGrid}>
-
-                        {/* 1. TIME & DURATION */}
-                        <div className={styles.metricCard}>
-                            <div className={styles.cardTitle}>
-                                <Clock size={18} /> Time Strategy
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Avg Hold Time</span>
-                                <span className={styles.statValue}>
-                                    {Math.round((data.summary[timeWindow].avgHoldTime || 0) / 60000)} mins
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Fastest Flip</span>
-                                <span className={styles.statValue}>
-                                    {Math.round((data.summary[timeWindow].fastestFlip || 0) / 1000)}s
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Longest Hold</span>
-                                <span className={styles.statValue}>
-                                    {Math.round((data.summary[timeWindow].longestHold || 0) / 3600000)}h
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* 2. GAINS & PROFITABILITY */}
-                        <div className={styles.metricCard}>
-                            <div className={styles.cardTitle}>
-                                <DollarSign size={18} /> Profitability
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Net Profit (Realized)</span>
-                                <span className={`${styles.statValue} ${data.summary[timeWindow].totalRealizedPnL >= 0 ? styles.positive : styles.negative}`}>
-                                    ${data.summary[timeWindow].totalRealizedPnLUSD?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Net Profit (Unrealized)</span>
-                                <span className={`${styles.statValue} ${data.summary[timeWindow].totalUnrealizedPnL >= 0 ? styles.positive : styles.negative}`}>
-                                    ${data.summary[timeWindow].totalUnrealizedPnLUSD?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Win Rate</span>
-                                <span className={styles.statValue} style={{ color: data.summary[timeWindow].winRate > 50 ? '#00d47e' : 'white' }}>
-                                    {data.summary[timeWindow].winRate?.toFixed(1) || '0.0'}%
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Profit Factor</span>
-                                <span className={styles.statValue} style={{ color: data.summary[timeWindow].profitFactor > 1.5 ? 'gold' : 'white' }}>
-                                    {data.summary[timeWindow].profitFactor?.toFixed(2) || '0.00'}x
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Avg Trade PnL</span>
-                                <span className={styles.statValue}>
-                                    ${data.summary[timeWindow].avgPnLUSD?.toFixed(2) || '0.00'}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span className={styles.statLabel}>Safe Copy Margin</span>
-                                    <Tooltip text="Median ROI. A high margin (e.g. >30%) protects you from copy-trading slippage.">
-                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
-                                    </Tooltip>
-                                </div>
-                                <span className={styles.statValue}>
-                                    {data.summary[timeWindow].safeCopyMargin?.toFixed(1) || '0.0'}%
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* 3. VOLUME & ACTIVITY */}
-                        <div className={styles.metricCard}>
-                            <div className={styles.cardTitle}>
-                                <BarChart3 size={18} /> Volume & Activity
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Total Volume</span>
-                                <span className={styles.statValue}>
-                                    ${data.summary[timeWindow].totalVolumeUSD?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Tokens Traded</span>
-                                <span className={styles.statValue}>
-                                    {data.summary[timeWindow].tokensTraded || 0}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Total Trades</span>
-                                <span className={styles.statValue}>
-                                    {data.summary[timeWindow].totalTrades || 0}
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Wins / Losses</span>
-                                <span className={styles.statValue}>
-                                    <span className={styles.positive}>{data.summary[timeWindow].winCount || 0}</span> / <span className={styles.negative}>{data.summary[timeWindow].lossCount || 0}</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* 4. COPY STRATEGY */}
-                        <div className={styles.metricCard}>
-                            <div className={styles.cardTitle}>
-                                <Brain size={18} /> Copy Strategy
-                            </div>
-                            <div className={styles.statRow}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span className={styles.statLabel}>Consistency Rating</span>
-                                    <Tooltip text="Win rate stability over 10+ trades. High consistency means predictable performance.">
-                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
-                                    </Tooltip>
-                                </div>
-                                <span className={styles.statValue} style={{ color: (data.summary[timeWindow].consistencyRating || 0) > 70 ? '#00d47e' : (data.summary[timeWindow].consistencyRating || 0) > 40 ? 'gold' : '#ff4d4d' }}>
-                                    {(data.summary[timeWindow].consistencyRating || 0).toFixed(0)}/100
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span className={styles.statLabel}>Diamond Hands</span>
-                                    <Tooltip text="Hold time score. 100 = Holds >24h. 0 = Sells <1min.">
-                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
-                                    </Tooltip>
-                                </div>
-                                <span className={styles.statValue} style={{ color: '#a366ff' }}>
-                                    {(data.summary[timeWindow].diamondHandRating || 0).toFixed(0)}/100
-                                </span>
-                            </div>
-                            <div className={styles.statRow}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span className={styles.statLabel}>Sniper Score</span>
-                                    <Tooltip text="% of trades entered within 15 minutes of token launch.">
-                                        <HelpCircle size={12} color="#666" style={{ cursor: 'help' }} />
-                                    </Tooltip>
-                                </div>
-                                <span className={styles.statValue} style={{
-                                    color: (data.summary[timeWindow].sniperEfficiency || 0) > 50 ? '#00d47e' : (data.summary[timeWindow].sniperEfficiency !== null ? 'white' : 'rgba(255,255,255,0.5)')
+                                    gap: 6
                                 }}>
-                                    {data.summary[timeWindow].sniperEfficiency !== null ? data.summary[timeWindow].sniperEfficiency + '%' : 'N/A'}
-                                </span>
+                                    <Activity size={14} color="#888" />
+                                    <span style={{ color: '#aaa' }}>Daily Scans:</span>
+                                    <strong style={{ color: usageInfo?.remaining > 0 ? '#fff' : '#ff4d4d' }}>
+                                        {usageInfo ? `${usageInfo.remaining} Remaining` : 'Calculating...'}
+                                    </strong>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                    </div>
-                )}
-
-                {/* Trades Table */}
-                <div className={styles.tableCard}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3>Position History</h3>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {['ALL', 'WINS', 'LOSSES', 'OPEN'].map(f => (
+                        {/* Time Window Tabs */}
+                        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                            {['1d', '7d', '14d', '30d', 'all'].map(t => (
                                 <button
-                                    key={f}
-                                    onClick={() => setHistoryFilter(f)}
+                                    key={t}
+                                    onClick={() => setTimeWindow(t)}
                                     style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
+                                        padding: '8px 16px',
+                                        borderRadius: 8,
+                                        background: timeWindow === t ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                                        color: timeWindow === t ? 'black' : 'white',
                                         border: 'none',
-                                        background: historyFilter === f ? (f === 'WINS' ? '#00d47e' : f === 'LOSSES' ? '#ff4d4d' : '#ccff00') : 'rgba(255,255,255,0.05)',
-                                        color: historyFilter === f ? '#000' : '#888',
-                                        transition: 'all 0.2s'
+                                        cursor: 'pointer',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        fontSize: 13
                                     }}
                                 >
-                                    {f}
+                                    {t === 'all' ? 'All Time' : `Last ${t}`}
                                 </button>
                             ))}
                         </div>
-                    </div>
 
-                    <div className={styles.tableHeader}>
-                        <span onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
-                            Status {sortField === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}
-                        </span>
-                        <span>Token</span>
-                        <span onClick={() => { setSortField('pnl'); setSortDirection(sortField === 'pnl' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
-                            PnL (ROI) {sortField === 'pnl' && (sortDirection === 'asc' ? '▲' : '▼')}
-                        </span>
-                        <span>Held</span>
-                        <span>Trades (B/S)</span>
-                        <span onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }} style={{ cursor: 'pointer' }}>
-                            Hold Time {sortField === 'date' && (sortDirection === 'asc' ? '▲' : '▼')}
-                        </span>
-                    </div>
+                        {/* --- DASHBOARD METRICS GRID --- */}
+                        {data?.summary?.[timeWindow] && (
+                            <ProfitabilityCard data={data} timeWindow={timeWindow} />
+                        )}
 
-                    <div className={styles.tableBody}>
-                        {data?.summary?.[timeWindow]?.details
-                            ?.filter(trade => {
-                                if (historyFilter === 'ALL') return true;
-                                if (historyFilter === 'WINS') return trade.pnl > 0;
-                                if (historyFilter === 'LOSSES') return trade.pnl < 0;
-                                if (historyFilter === 'OPEN') return trade.status === 'OPEN';
-                                return true;
-                            })
-                            .sort((a, b) => {
-                                let valA = a[sortField];
-                                let valB = b[sortField];
+                        {/* Trades Table */}
+                        <div className={styles.tableCard}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h3>Position History</h3>
 
-                                // Special handling for dates/duration
-                                if (sortField === 'date') {
-                                    // Use lastSellTime (most recent activity) or firstBuyTime
-                                    valA = a.lastSellTime || a.firstBuyTime || 0;
-                                    valB = b.lastSellTime || b.firstBuyTime || 0;
-                                }
+                            </div>
 
-                                if (sortField === 'status') {
-                                    // Custom order: OPEN > CLOSED > PARTIAL
-                                    const statusOrder = { 'OPEN': 3, 'CLOSED': 1, 'PARTIAL_HISTORY': 0 };
-                                    valA = statusOrder[a.status] || 0;
-                                    valB = statusOrder[b.status] || 0;
-                                }
+                            <CompactTradeTable
+                                trades={data?.summary?.[timeWindow]?.details?.map(trade => ({
+                                    ...trade,
+                                    metadata: data?.tokenInfo?.[trade.mint] || {}
+                                })) || []}
+                            />
+                        </div>
 
-                                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-                                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-                                return 0;
-                            })
-                            .map((trade, i) => {
-                                const meta = data.tokenInfo?.[trade.mint] || {};
-                                const symbol = meta.symbol || 'UNKNOWN';
-                                const name = meta.name || trade.mint.slice(0, 8);
-                                const image = meta.image || '';
-
-                                return (
-                                    <div key={i} className={styles.tableRow}>
-                                        <div>
-                                            <span className={`${styles.statusBadge} ${trade.status === 'CLOSED' ? styles.statusClosed :
-                                                trade.status === 'OPEN' ? styles.statusOpen :
-                                                    styles.statusPartial
-                                                }`}>
-                                                {trade.status === 'PARTIAL_HISTORY' ? 'PARTIAL' : trade.status}
-                                            </span>
-                                        </div>
-                                        <div className={styles.tokenCell}>
-                                            <Link href={`/analyze/${trade.mint}`} className={styles.tokenLink}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    {image ? (
-                                                        <img src={image} alt={symbol} style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                                                    ) : (
-                                                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <DollarSign size={14} color="#888" />
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div style={{ fontWeight: 700, color: 'white' }}>{symbol}</div>
-                                                        <div className={styles.tokenMint}>{name}</div>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        </div>
-                                        <div className={styles.pnlCell}>
-                                            <span className={trade.pnl >= 0 ? styles.positive : styles.negative} style={{ fontWeight: 700 }}>
-                                                {Number(trade.pnl).toFixed(3)} SOL
-                                            </span>
-                                            <span className={trade.roi >= 0 ? styles.positive : styles.negative} style={{ fontSize: 12 }}>
-                                                ({Number(trade.roi).toFixed(1)}%)
-                                            </span>
-                                        </div>
-                                        <div style={{ fontSize: 13, color: '#ccc' }}>
-                                            {trade.status === 'OPEN' ? 'Holding' : '-'}
-                                        </div>
-                                        <span style={{ color: '#ccc' }}>
-                                            {trade.buyCount} / {trade.sellCount}
-                                        </span>
-                                        <span>
-                                            {trade.holdTime ? (trade.holdTime / 60000 < 60 ? Math.round(trade.holdTime / 60000) + 'm' : Math.round(trade.holdTime / 3600000) + 'h') : '-'}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                    </div>
-                    {(!data?.summary?.[timeWindow]?.details || data.summary[timeWindow].details.length === 0) && (
-                        <div className={styles.emptyState}>No positions found in recent history.</div>
-                    )}
-                </div>
-            </div >
-        </div >
+                        {(!data?.summary?.[timeWindow]?.details || data.summary[timeWindow].details.length === 0) && (
+                            <div className={styles.emptyState}>No positions found in recent history.</div>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
     );
 }

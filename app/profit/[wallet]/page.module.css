@@ -573,8 +573,22 @@
     color: var(--primary);
 }
 
+.lockContent h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 12px;
+}
+
+.lockContent p {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    line-height: 1.5;
+    font-size: 15px;
+}
+
 .upgradeBtn {
-    margin-top: 24px;
+    /* margin-top: 24px; REMOVED, handled by p margin */
     padding: 16px 40px;
     background: var(--primary);
     color: black;
@@ -585,6 +599,9 @@
     cursor: pointer;
     text-transform: uppercase;
     transition: transform 0.2s;
+    width: 100%;
+    /* Full width looks better */
+    max-width: 320px;
 }
 
 .upgradeBtn:hover {

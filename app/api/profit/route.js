@@ -142,7 +142,7 @@ export async function POST(request) {
         let balance = 0;
         try {
             // Extract Helius key or from env
-            const apiKey = process.env.NEXT_PUBLIC_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1];
+            const apiKey = process.env.HELIUS_RPC_URL?.match(/api-key=([a-f0-9-]+)/i)?.[1] || process.env.HELIUS_BACKUP_API_KEY;
             if (apiKey) {
                 const balRes = await fetch(`https://api.helius.xyz/v0/addresses/${walletToAnalyze}/balances?api-key=${apiKey}`);
                 const balJson = await balRes.json();
