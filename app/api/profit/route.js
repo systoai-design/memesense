@@ -205,8 +205,11 @@ export async function POST(request) {
             }
         })();
 
+        // Wait for Price (Critical for PnL)
+        const solPrice = await solPricePromise;
+
         // 3. Preliminary Analysis (Identifies Open Positions)
-        const initialAnalysis = analyzeTimeWindows(trades);
+        const initialAnalysis = analyzeTimeWindows(trades, {}, solPrice);
 
         // 4. Fetch Prices for Open Positions
         // Extract all mints that have "OPEN" status in 'all' timeframe
