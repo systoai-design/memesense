@@ -17,8 +17,8 @@ export default function ProfitabilityCard({ data, timeWindow = '7d' }) {
     const fmtPct = (val) => (val || 0).toFixed(2) + '%';
     const fmtK = (val) => {
         if (!val) return '0';
-        if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-        if (val >= 1000) return (val / 1000).toFixed(1) + 'K';
+        if (val >= 1000000) return (val / 1000000).toFixed(2) + 'M';
+        if (val >= 1000) return (val / 1000).toFixed(2) + 'K';
         return val.toLocaleString();
     };
 
@@ -129,7 +129,7 @@ export default function ProfitabilityCard({ data, timeWindow = '7d' }) {
                             <span style={{ fontSize: 12, color: '#52525b' }}>{timeWindow} TXs: {summary.totalTrades}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
-                            <StatRow label="Bal" value={`${(data.balance || 0).toFixed(2)} SOL`} sub={`($${fmtK((data.balance || 0) * (data.solPrice || 0)).replace('K', '')})`} />
+                            <StatRow label="Bal" value={`${(data.balance || 0).toFixed(2)} SOL`} sub={`($${fmtK((data.balance || 0) * (data.solPrice || 0))})`} />
                             <StatRow label="Avg Duration" value={`${fmtDuration(summary.avgHoldTime)}`} />
                             <StatRow label="Cost" value={`$${fmtK(summary.totalVolumeUSD / 2)}`} />
                             <StatRow label="Avg Cost / Sold" value={`$${fmtK(summary.avgBuySizeUSD)} / $${fmtK(summary.avgSellSizeUSD)}`} />
