@@ -228,10 +228,8 @@ export async function POST(request) {
 
 
         // 5. Await Critical Data for Final Analysis
-        const [priceMap, solPrice] = await Promise.all([
-            priceMapPromise,
-            solPricePromise
-        ]);
+        // 5. Await Critical Data for Final Analysis
+        const priceMap = await priceMapPromise;
 
         // 5b. Re-Analyze with Prices
         // 5b. Re-Analyze with Prices
