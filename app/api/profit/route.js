@@ -53,6 +53,7 @@ export async function POST(request) {
 
                 // Fetch only NEW trades since last stored (try Solscan first)
                 try {
+                    /* SOLSCAN DISABLED - CAUSING PNL INACCURACY
                     const newTrades = await getWalletSwaps(walletToAnalyze, {
                         fromTime: latestTimestamp,
                         pageSize: 100,
@@ -65,7 +66,9 @@ export async function POST(request) {
                         await storeWalletTrades(walletToAnalyze, newTrades);
                         trades = [...newTrades, ...storedTrades];
                         fetchedNewTrades = true;
-                    }
+                    }  
+                    */
+                    throw new Error("Solscan Disabled");
                 } catch (solscanError) {
                     console.warn('[ProfitAPI] Solscan failed, trying Helius fallback:', solscanError.message);
 
@@ -187,8 +190,19 @@ export async function POST(request) {
             try {
                 const wSOL = 'So11111111111111111111111111111111111111112';
                 const data = await getTokenData(wSOL);
-                return data.price || 0;
-            } catch (e) { return 0; }
+                let price = data.price || 0;
+
+                // Sanity Check: SOL should not be < $10 (unless catastrophic crash)
+                // This prevents the $0.12 bug if DexScreener picks a bad pair.
+                if (price < 10) {
+                    console.warn(`[ProfitAPI] Suspicious SOL Price: $${price}. Using fallback ($150).`);
+                    price = 150;
+                }
+                return price;
+            } catch (e) {
+                console.warn('[ProfitAPI] SOL Price Fetch Failed, using fallback ($150)');
+                return 150;
+            }
         })();
 
         // 3. Preliminary Analysis (Identifies Open Positions)

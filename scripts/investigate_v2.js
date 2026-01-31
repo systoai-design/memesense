@@ -1,10 +1,10 @@
-process.env.HELIUS_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=3e6f58e1-3e87-41a3-ad97-06b99bfd0ec9';
-// import 'dotenv/config'; 
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { getWalletHistory } from '../lib/helius.js';
 import { calculateWalletMetrics, analyzeTimeWindows } from '../lib/trade-analysis.js';
 import { getBatchTokenPrices, getTokenData } from '../lib/dexscreener.js';
 
-const WALLET = '8chkaxQNZ4TZqpWzvb8p5opxwmTHJkrK69GBMUp4BqJf';
+const WALLET = '8YWZkrj6p3HC4rbtWMc5No8A523mDcmcKxGhWmSfbCVa';
 
 async function investigate() {
     console.log(`Analyzing ${WALLET}...`);
@@ -41,8 +41,15 @@ async function investigate() {
 
     // 6. Re-Analyze with Prices
     const finalWindows = analyzeTimeWindows(trades, priceMap, solPrice);
+    const m7 = finalWindows['7d'];
     const m30 = finalWindows['30d'];
     const mAllFinal = finalWindows['all'];
+
+    console.log("\n--- 7 DAY METRICS (Benchmark Comp) ---");
+    console.log(`Trades: ${m7.totalTrades}`);
+    console.log(`Win Rate: ${m7.winRate.toFixed(2)}%`);
+    console.log(`Realized PnL: ${m7.totalRealizedPnL.toFixed(2)} SOL ($${m7.totalRealizedPnLUSD.toFixed(2)})`);
+    console.log(`Gross Profit: $${m7.grossProfit.toFixed(2)} | Gross Loss: $${m7.grossLoss.toFixed(2)}`);
 
     console.log("\n--- 30 DAY METRICS ---");
     console.log(`Trades: ${m30.totalTrades}`);
@@ -50,8 +57,8 @@ async function investigate() {
     console.log(`Realized PnL: ${m30.totalRealizedPnL.toFixed(2)} SOL`);
 
     // Sum Unrealized
-    const unrealized = m30.details.reduce((acc, p) => acc + (p.status === 'OPEN' ? p.unrealizedPnL : 0), 0);
-    const unrealizedUSD = m30.details.reduce((acc, p) => acc + (p.status === 'OPEN' ? p.unrealizedPnLUSD : 0), 0);
+    const unrealized = m7.details.reduce((acc, p) => acc + (p.status === 'OPEN' ? p.unrealizedPnL : 0), 0);
+    const unrealizedUSD = m7.details.reduce((acc, p) => acc + (p.status === 'OPEN' ? p.unrealizedPnLUSD : 0), 0);
     console.log(`Unrealized PnL: ${unrealized.toFixed(2)} SOL ($${unrealizedUSD.toFixed(2)})`);
 
     console.log("\n--- TOP OPEN POSITIONS (Unrealized) ---");
