@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades, logUserScan } from '@/lib/db';
+import { getOrCreateUser, canUseAnalysis, recordUsage, recordScan, getWalletLabel, getStoredTrades, getLatestTradeTimestamp, storeWalletTrades, logUserScan, PREMIUM_WALLETS } from '@/lib/db';
 import { getWalletHistory, getBatchTokenMetadata } from '@/lib/helius';
 import { getWalletSwaps } from '@/lib/solscan';
 import { calculateWalletMetrics, analyzeTimeWindows } from '@/lib/trade-analysis';
@@ -15,9 +15,8 @@ export async function POST(request) {
         // 1. Auth & Premium Check
         const user = await getOrCreateUser({ deviceId, walletAddress: userWallet });
 
-        // Admin Bypass
-        const ADMIN_WALLET = process.env.ADMIN_WALLET || '2unNnTnv5DcmtdQYAJuLzg4azHu67obGL9dX8PYwxUDQ';
-        const isAdmin = userWallet === ADMIN_WALLET;
+        // Admin/Premium Bypass
+        const isAdmin = userWallet && PREMIUM_WALLETS.includes(userWallet);
 
         // Check Usage Limits (always deep scan now)
         const usageCheck = await canUseAnalysis(user.id, 'deep');

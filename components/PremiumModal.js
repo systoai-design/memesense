@@ -10,7 +10,8 @@ const PRICE_SOL = 5;
 const DEV_WALLETS = [
     'HsmYvnrqiqSMdinKAddYJk3N61vRmhpXq2Sgw3uukV11',
     'W6Qe25zGpwRpt7k8Hrg2RANF7N88XP7JU5BEeKaTrJ2',
-    'BUbC5ugi4tnscNowHrNfvNsU5SZfMfcnBv7NotvdWyq8'
+    'BUbC5ugi4tnscNowHrNfvNsU5SZfMfcnBv7NotvdWyq8',
+    'FrCFPYpcLpeifKMBqkgq3HMivMDAtb9F2rFFhB5EAsNq'
 ];
 
 export default function PremiumModal({ onClose, onSuccess, walletAddress }) {
